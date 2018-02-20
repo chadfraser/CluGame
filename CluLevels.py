@@ -24,6 +24,9 @@ def getImage(imagePath):
 
 class Level:
     def __init__(self, rubberTilesHorizontal, rubberTilesVertical, goldTilesHorizontal, goldTilesVertical):
+        self.image = None
+        self.standardImage = None
+        self.lightImage = None
         self.itemTiles = []  # 9 wide, 7 high
         self.rubberTilesHorizontal = rubberTilesHorizontal
         self.rubberTilesVertical = rubberTilesVertical
@@ -32,10 +35,26 @@ class Level:
         self.goldCount = 0
         self.playerStartPosition = (0, 0)
         self.blackHolePositions = []
+        self.levelBorderRects = []
+        self.isFlashing = False
+        self.frameCount = 0
         # 50x50 tiles
 
-    def setGoldCount(self):
+    def initialize(self):
         self.goldCount = len(self.goldTilesVertical) + len(self.goldTilesHorizontal)
+        self.isFlashing = False
+        self.image = self.standardImage
+
+
+    def flashBoard(self):
+        if self.isFlashing:
+            self.frameCount += 1
+            if self.frameCount % 12 < 7:
+                self.image = self.standardImage
+            else:
+                self.image = self.lightImage
+            if self.frameCount == 12:
+                self.frameCount = 0
 
 
 class BoardOneLevel(Level):
@@ -43,10 +62,14 @@ class BoardOneLevel(Level):
         super().__init__(rubberTilesHorizontal, rubberTilesVertical, goldTilesHorizontal, goldTilesVertical)
         self.image = getImage("background_1A.png")
         self.image.set_colorkey(BLACK)
+        self.standardImage = getImage("background_1A.png")
         self.lightImage = getImage("background_1B.png")
-        self.lightImage.set_colorkey(BLACK)
         self.playerStartPosition = [(2, 1), (10, 1)]
         self.blackHolePositions = [(5, 4)]
+        self.levelBorderRects = [pygame.Rect(0, 0, 80, 84), pygame.Rect(0, 0, 512, 36), pygame.Rect(0, 0, 39, 448),
+                                 pygame.Rect(432, 0, 80, 84), pygame.Rect(477, 0, 39, 448),
+                                 pygame.Rect(0, 380, 80, 84), pygame.Rect(432, 380, 80, 84),
+                                 pygame.Rect(0, 426, 512, 36)]
 
 
 class BoardTwoLevel(Level):
@@ -54,10 +77,14 @@ class BoardTwoLevel(Level):
         super().__init__(rubberTilesHorizontal, rubberTilesVertical, goldTilesHorizontal, goldTilesVertical)
         self.image = getImage("background_2A.png")
         self.image.set_colorkey(BLACK)
+        self.standardImage = getImage("background_2A.png")
         self.lightImage = getImage("background_2B.png")
-        self.lightImage.set_colorkey(BLACK)
         self.playerStartPosition = [(5, 0), (7, 0)]
         self.blackHolePositions = [(2, 6), (8, 6)]
+        self.levelBorderRects = [pygame.Rect(0, 0, 80, 84), pygame.Rect(0, 0, 512, 36), pygame.Rect(0, 0, 39, 448),
+                                 pygame.Rect(432, 0, 80, 84), pygame.Rect(477, 0, 39, 448),
+                                 pygame.Rect(0, 380, 80, 84), pygame.Rect(432, 380, 80, 84),
+                                 pygame.Rect(0, 426, 512, 36)]
 
 
 class BoardThreeLevel(Level):
@@ -65,10 +92,13 @@ class BoardThreeLevel(Level):
         super().__init__(rubberTilesHorizontal, rubberTilesVertical, goldTilesHorizontal, goldTilesVertical)
         self.image = getImage("background_3A.png")
         self.image.set_colorkey(BLACK)
+        self.standardImage = getImage("background_3A.png")
         self.lightImage = getImage("background_3B.png")
-        self.lightImage.set_colorkey(BLACK)
         self.playerStartPosition = [(6, 1), (6, 6)]
         self.blackHolePositions = [(4, 4), (6, 4)]
+        self.levelBorderRects = [pygame.Rect(0, 0, 512, 36), pygame.Rect(0, 0, 39, 448), pygame.Rect(477, 0, 39, 448),
+                                 pygame.Rect(0, 426, 512, 36), pygame.Rect(190, 0, 134, 84),
+                                 pygame.Rect(190, 380, 134, 84)]
 
 
 class BoardFourLevel(Level):
@@ -76,10 +106,13 @@ class BoardFourLevel(Level):
         super().__init__(rubberTilesHorizontal, rubberTilesVertical, goldTilesHorizontal, goldTilesVertical)
         self.image = getImage("background_4A.png")
         self.image.set_colorkey(BLACK)
+        self.standardImage = getImage("background_4A.png")
         self.lightImage = getImage("background_4B.png")
-        self.lightImage.set_colorkey(BLACK)
         self.playerStartPosition = [(5, 0), (7, 0)]
         self.blackHolePositions = [(2, 2), (8, 2), (4, 6), (6, 6)]
+        self.levelBorderRects = [pygame.Rect(0, 0, 512, 36), pygame.Rect(238, 0, 36, 132),
+                                 pygame.Rect(238, 346, 36, 132), pygame.Rect(0, 426, 512, 36),
+                                 pygame.Rect(0, 92, 38, 280), pygame.Rect(476, 92, 38, 280)]
 
 
 class BoardFiveLevel(Level):
@@ -87,10 +120,13 @@ class BoardFiveLevel(Level):
         super().__init__(rubberTilesHorizontal, rubberTilesVertical, goldTilesHorizontal, goldTilesVertical)
         self.image = getImage("background_5A.png")
         self.image.set_colorkey(BLACK)
+        self.standardImage = getImage("background_5A.png")
         self.lightImage = getImage("background_5B.png")
-        self.lightImage.set_colorkey(BLACK)
         self.playerStartPosition = [(2, 0), (10, 0)]
         self.blackHolePositions = [(2, 4), (4, 4), (6, 4), (8, 4)]
+        self.levelBorderRects = [pygame.Rect(0, 0, 512, 36), pygame.Rect(238, 0, 40, 84), pygame.Rect(0, 426, 512, 36),
+                                 pygame.Rect(238, 380, 40, 84), pygame.Rect(0, 0, 36, 84), pygame.Rect(478, 0, 36, 84),
+                                 pygame.Rect(0, 380, 36, 84), pygame.Rect(478, 380, 36, 84)]
 
 
 class BonusLevel(Level):
@@ -105,9 +141,13 @@ class BonusLevel(Level):
         super().__init__([], [], goldTilesHorizontal, goldTilesVertical)
         self.image = getImage("background_6A.png")
         self.image.set_colorkey(BLACK)
+        self.standardImage = getImage("background_6A.png")
         self.lightImage = getImage("background_6B.png")
-        self.lightImage.set_colorkey(BLACK)
         self.playerStartPosition = [(5, 1), (7, 1)]
+        self.playerStartPosition = [(2, 4), (9, 4)]
+        self.levelBorderRects = [pygame.Rect(0, 0, 512, 36), pygame.Rect(188, 186, 136, 94),
+                                 pygame.Rect(0, 426, 512, 36), pygame.Rect(0, 0, 39, 448),
+                                 pygame.Rect(477, 0, 39, 448)]
 
 
 HEART = BoardOneLevel([], [(4, 3), (7, 3)],

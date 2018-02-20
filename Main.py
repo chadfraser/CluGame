@@ -34,6 +34,7 @@ def playSound(soundPath):
         _soundLibrary[soundPath] = sound
     sound.play()
 
+
 pygame.init()
 pygame.font.init()
 
@@ -85,22 +86,20 @@ def setHighScore(highScore):
         highScoreFile.write(str(highScore))
 
 
-def blitLevelData(playerList, level, time, shouldFlash, enemySpriteList):
-    blackHoleList = [sprite for sprite in enemySpriteList if isinstance(sprite, CluSprites.BlackHoleSprite)]
+def blitLevelData(playerList, level, time):
     livesText = FONT.render("<", False, ORANGE)
     livesTextTwo = FONT.render("{}".format(min(playerList[0].lives, 9)), False, WHITE)
     livesTextThree = FONT.render(">", False, ORANGE)
     goldText = FONT.render("LAST,{:02d}".format(level.goldCount), False, WHITE)
     timeText = FONT.render("TIME,{:03d}".format(time), False, WHITE)
-    if shouldFlash:
-        SCREEN.blit(level.lightImage, (0, 0))
-    else:
-        SCREEN.blit(level.image, (0, 0))
+    SCREEN.blit(level.image, (0, 0))
     SCREEN.blit(livesText, (42, 16))
     SCREEN.blit(livesTextTwo, (55, 16))
     SCREEN.blit(livesTextThree, (70, 16))
     SCREEN.blit(goldText, (132, 16))
     SCREEN.blit(timeText, (262, 16))
+    for hole in CluSprites.blackHoleGroup:
+        SCREEN.blit(hole.image, hole.coordinates)
     if len(playerList) > 1:
         livesTextFour = FONT.render("<", False, GREEN)
         livesTextFive = FONT.render("{}".format(min(playerList[1].lives, 9)), False, WHITE)
@@ -108,8 +107,6 @@ def blitLevelData(playerList, level, time, shouldFlash, enemySpriteList):
         SCREEN.blit(livesTextFour, (428, 16))
         SCREEN.blit(livesTextFive, (441, 16))
         SCREEN.blit(livesTextSix, (456, 16))
-    for (x, y), hole in zip(level.blackHolePositions, blackHoleList):
-        SCREEN.blit(hole.image, (-1 + 48 * x, 49 + 48 * y))
 
 
 def displayTitleScreen(playerOneScore=0, playerTwoScore=0):
@@ -149,7 +146,7 @@ def displayTitleScreen(playerOneScore=0, playerTwoScore=0):
                         playerList = [CluSprites.PlayerSprite()]
                         if numberOfPlayers == 2:
                             playerList.append(CluSprites.PlayerSprite(2))
-                        playLevel(playerList, CluLevels.HOUSE, 0)
+                        playLevel(playerList, CluLevels.KEY, 0)
                     elif pygame.key.name(event.key) == controlsDicts[0]["pause"]:
                         numberOfPlayers = chooseOneOrTwoPlayers(subtitleImage, titleImageOne, titleImageTwo,
                                                                 "CONTROLS")
@@ -193,7 +190,7 @@ def animateDemo():
     playerListDemo[1].lives = 1
     levelDemo = CluLevels.HOUSE
     blackHoleDemo = [CluSprites.BlackHoleSprite()]
-    blitLevelData(playerListDemo, levelDemo, 800, False, blackHoleDemo)
+    blitLevelData(playerListDemo, levelDemo, 800)
     for num, player in enumerate(playerListDemo):
         player.baseCoordinates = (-49 + 48 * levelDemo.playerStartPosition[num][0],
                                   49 + 48 * levelDemo.playerStartPosition[num][1])
@@ -208,10 +205,9 @@ def animateDemo():
 
 def playLevel(playerList, level, levelCount):
     levelCount += 1
-    level.setGoldCount()
+    level.initialize()
     pausedPlayerNumber = 0
     levelComplete = False
-    shouldFlash = False
     alreadyLoadedLevelEnd = False
     playingLowTimeMusic = False
     timeReachedZero = False
@@ -219,16 +215,19 @@ def playLevel(playerList, level, levelCount):
     frameCount = 0
     timeCount = 800
 
-    enemySpriteList = [CluSprites.BlackHoleSprite() for _ in range(len(level.blackHolePositions))]
+    CluSprites.blackHoleGroup.empty()
+    CluSprites.enemyGroup.empty()
+    CluSprites.blackHoleGroup.add(CluSprites.BlackHoleSprite() for _ in range(len(level.blackHolePositions)))
+    for (x, y), hole in zip(level.blackHolePositions, CluSprites.blackHoleGroup):
+        hole.setCoordinates(-1 + 48 * x, 49 + 48 * y)
 
     SCREEN.fill(BLACK)
-    blitLevelData(playerList, level, timeCount, False, enemySpriteList)
+    blitLevelData(playerList, level, timeCount)
     pygame.display.update()
     pygame.mixer.music.load(LEVEL_START_MUSIC)
     pygame.mixer.music.play()
-    spriteList = playerList[:]
 
-    pygame.time.delay(6000)
+    # pygame.time.delay(6000)
     pygame.event.clear()
     pygame.mixer.music.load(LEVEL_MUSIC)
     pygame.mixer.music.play(-1)
@@ -240,7 +239,8 @@ def playLevel(playerList, level, levelCount):
             player.setCoordinates(-49 + 48 * level.playerStartPosition[num][0],
                                   49 + 48 * level.playerStartPosition[num][1])
         player.putSpriteInBall()
-        player.playerState = CluSprites.PlayerStates.DEAD
+        CluSprites.PlayerSprite.currentLevel = level
+        CluSprites.UrchinSprite.currentLevel = level
 
     while True:
         while pausedPlayerNumber != 0:
@@ -258,12 +258,6 @@ def playLevel(playerList, level, levelCount):
                         pausedPlayerNumber = 1
                         pygame.time.delay(1000)
                         pygame.event.clear()
-                    elif pygame.key.name(event.key) == controlsDicts[1]["pause"] and len(playerList) > 1:
-                        pygame.mixer.music.pause()
-                        playSound("pause_unpause.wav")
-                        pausedPlayerNumber = 2
-                        pygame.time.delay(1000)
-                        pygame.event.clear()
                     elif pygame.key.name(event.key) in [controlsDicts[0]["up"], controlsDicts[0]["down"],
                                                         controlsDicts[0]["left"], controlsDicts[0]["right"]]:
                         if playerList[0].playerState == CluSprites.PlayerStates.BALL:
@@ -271,8 +265,14 @@ def playLevel(playerList, level, levelCount):
                                                if val == pygame.key.name(event.key)][0]
                             playerList[0].startMoving(directionChosen)
                     elif pygame.key.name(event.key) == controlsDicts[0]["shoot"]:
-                        shootWave(spriteList, playerList[0])
+                        shootWave(playerList[0])
                     elif len(playerList) > 1:
+                        if pygame.key.name(event.key) == controlsDicts[1]["pause"]:
+                            pygame.mixer.music.pause()
+                            playSound("pause_unpause.wav")
+                            pausedPlayerNumber = 2
+                            pygame.time.delay(1000)
+                            pygame.event.clear()
                         if pygame.key.name(event.key) in [controlsDicts[1]["up"], controlsDicts[1]["down"],
                                                           controlsDicts[1]["left"], controlsDicts[1]["right"]]:
                             if playerList[1].playerState == CluSprites.PlayerStates.BALL:
@@ -280,20 +280,19 @@ def playLevel(playerList, level, levelCount):
                                                    if val == pygame.key.name(event.key)][0]
                                 playerList[1].startMoving(directionChosen)
                         if pygame.key.name(event.key) == controlsDicts[1]["shoot"]:
-                            shootWave(spriteList, playerList[1])
+                            shootWave(playerList[1])
             SCREEN.fill(BLACK)
-            blitLevelData(playerList, level, timeCount, shouldFlash, enemySpriteList)
+            blitLevelData(playerList, level, timeCount)
             if not levelComplete:
-                for sprite in spriteList:
-                    SCREEN.blit(sprite.image, sprite.coordinates)
+                for group in CluSprites.allGroups:
+                    for sprite in group:
+                        SCREEN.blit(sprite.image, sprite.coordinates)
+                # for sprite in CluSprites.playerGroup:
+                #     pygame.draw.rect(SCREEN, WHITE, sprite.rect)
                 if frameCount % 5 == 0:
                     timeCount = max(0, timeCount - 1)
-                for sprite in spriteList:
-                    sprite.update()
-                    if isinstance(sprite, CluSprites.SonicWaveSprite) and sprite.frameCount > 32:
-                        spriteList.remove(sprite)
-                for sprite in enemySpriteList:
-                    sprite.update()
+                for group in CluSprites.allGroups:
+                    group.update()
                 if timeCount > 200 and playingLowTimeMusic:
                     playingLowTimeMusic = False
                     pygame.mixer.music.load(LEVEL_MUSIC)
@@ -322,13 +321,13 @@ def playLevel(playerList, level, levelCount):
                     if not gameOverTextCreated:
                         frameCount = 0
                         gameOverTextSprite = CluSprites.GameOverTextSprite()
-                        spriteList.append(gameOverTextSprite)
+                        CluSprites.itemGroup.add(gameOverTextSprite)
                         pygame.mixer.music.stop()
                         pygame.mixer.music.load(GAME_OVER_MUSIC)
                         pygame.mixer.music.play()
                         gameOverTextCreated = True
                     if frameCount == 300:
-                        spriteList.remove(gameOverTextSprite)
+                        CluSprites.itemGroup.remove(gameOverTextSprite)
                         pygame.mixer.music.stop()
                         pygame.mixer.music.load(LEVEL_END_MUSIC)
                         pygame.mixer.music.play()
@@ -340,10 +339,7 @@ def playLevel(playerList, level, levelCount):
                     pygame.mixer.music.stop()
                     pygame.mixer.music.play()
                     alreadyLoadedLevelEnd = True
-                if frameCount % 12 == 6:
-                    shouldFlash = True
-                elif frameCount % 12 == 0:
-                    shouldFlash = False
+                    level.isFlashing = True
                 elif frameCount > 330:
                     # Add level end
                     pygame.display.update()
@@ -378,16 +374,15 @@ def pauseGame(pausingPlayerIndex):
                     return
 
 
-def shootWave(spriteList, player):
-    listOfSonicWaveSprites = [sprite for sprite in spriteList if
-                              isinstance(sprite, CluSprites.SonicWaveSprite) and
-                              sprite.firingPlayerNumber == player.playerNumber]
-    if len(listOfSonicWaveSprites) < 2 and player.playerState in [CluSprites.PlayerStates.MOVING,
-                                                                  CluSprites.PlayerStates.SWINGING]:
+def shootWave(player):
+    sonicWavesFromPlayer = [sprite for sprite in CluSprites.attackGroup if
+                            sprite.firingPlayerNumber == player.playerNumber]
+    if len(sonicWavesFromPlayer) < 2 and player.playerState in [CluSprites.PlayerStates.MOVING,
+                                                                CluSprites.PlayerStates.SWINGING]:
         playSound("shoot_wave.wav")
-        spriteList.append(CluSprites.SonicWaveSprite(player.facingDirection, player.playerNumber))
-        spriteList[-1].setInitialCoordinates(player.coordinates[0],
-                                             player.coordinates[1])
+        newWave = CluSprites.SonicWaveSprite(player.facingDirection, player.playerNumber)
+        newWave.setInitialCoordinates(player.coordinates[0], player.coordinates[1])
+        CluSprites.attackGroup.add(newWave)
 
 
 def setTextCoordinates(value, numberOfPlayers):
@@ -526,7 +521,7 @@ def chooseOneOrTwoPlayers(subtitle, titleImageOne, titleImageTwo, textToDisplay)
         CLOCK.tick(FPS)
 
 
-if __name__ == "__main__":
+def main():
     playerOneCurrentScore = 0
     playerTwoCurrentScore = 0
 
@@ -552,7 +547,12 @@ if __name__ == "__main__":
         #     pygame.display.update()
         #     pygame.time.delay(60000)
         #     SCREEN.fill(BLACK)
-
+        for group in CluSprites.allGroups:
+            group.empty()
         displayTitleScreen(playerOneCurrentScore, playerTwoCurrentScore)
         pygame.display.update()
         CLOCK.tick(FPS)
+
+
+if __name__ == "__main__":
+    main()
