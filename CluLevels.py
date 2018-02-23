@@ -45,7 +45,6 @@ class Level:
         self.isFlashing = False
         self.image = self.standardImage
 
-
     def flashBoard(self):
         if self.isFlashing:
             self.frameCount += 1
@@ -65,6 +64,7 @@ class BoardOneLevel(Level):
         self.standardImage = getImage("background_1A.png")
         self.lightImage = getImage("background_1B.png")
         self.playerStartPosition = [(2, 1), (10, 1)]
+        # self.playerStartPosition = [(2, 1), (3, 2)]
         self.blackHolePositions = [(5, 4)]
         self.levelBorderRects = [pygame.Rect(0, 0, 80, 84), pygame.Rect(0, 0, 512, 36), pygame.Rect(0, 0, 39, 448),
                                  pygame.Rect(432, 0, 80, 84), pygame.Rect(477, 0, 39, 448),
