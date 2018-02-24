@@ -153,7 +153,7 @@ def displayTitleScreen(playerOneScore=0, playerTwoScore=0):
                             playerList.append(CluSprites.PlayerSprite(2))
                             playerArmList.append(CluSprites.PlayerArmSprite(2))
                             playerArmList[1].playerBody = playerList[1]
-                        playLevel(playerList, playerArmList, CluLevels.BUTTERFLY, 0)  ################
+                        playLevel(playerList, playerArmList, CluLevels.HOUSE, 0)  ################
                     elif pygame.key.name(event.key) == controlsDicts[0]["pause"]:
                         numberOfPlayers = chooseOneOrTwoPlayers(subtitleImage, titleImageOne, titleImageTwo,
                                                                 "CONTROLS")
@@ -208,22 +208,19 @@ def animateDemo():
 
 
 def playLevel(playerList, playerArmList, level, levelCount):
+    CluSprites.blackHoleGroup.empty()
+    CluSprites.enemyGroup.empty()
+
     levelCount += 1
-    setUpGold(level)
+    setUpLevel(level)
     pausedPlayerNumber = 0
     levelComplete = False
     alreadyLoadedLevelEnd = False
     playingLowTimeMusic = False
     timeReachedZero = False
-    gameOverTextCreated = False
+    gameOverTextActive = [0 for __ in range(len(playerList))]
     frameCount = 0
     timeCount = 800
-
-    CluSprites.blackHoleGroup.empty()
-    CluSprites.enemyGroup.empty()
-    CluSprites.blackHoleGroup.add(CluSprites.BlackHoleSprite() for _ in range(len(level.blackHolePositions)))
-    for (x, y), hole in zip(level.blackHolePositions, CluSprites.blackHoleGroup):
-        hole.setCoordinates(-1 + 48 * x, 49 + 48 * y)
 
     SCREEN.fill(BLACK)
     blitLevelData(playerList, level, timeCount)
@@ -237,14 +234,11 @@ def playLevel(playerList, playerArmList, level, levelCount):
     pygame.mixer.music.play(-1)
 
     for num, player in enumerate(playerList):
-        if player.lives > 0:
-            player.baseCoordinates = (-48 + 48 * level.playerStartPosition[num][0],
-                                      49 + 48 * level.playerStartPosition[num][1])
-            player.setCoordinates(-48 + 48 * level.playerStartPosition[num][0],
-                                  49 + 48 * level.playerStartPosition[num][1])
-        player.putSpriteInBall()
+        player.initialize(-49 + 48 * level.playerStartPosition[num][0],
+                          49 + 48 * level.playerStartPosition[num][1])
         CluSprites.PlayerSprite.currentLevel = level
         CluSprites.GoldSprite.levelCount = levelCount
+        player.lives = 0
 
     while True:
         while pausedPlayerNumber != 0:
@@ -255,20 +249,20 @@ def playLevel(playerList, playerArmList, level, levelCount):
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
-                if event.type == pygame.KEYUP:
-                    if pygame.key.name(event.key) in [controlsDicts[0]["up"], controlsDicts[0]["down"],
-                                                      controlsDicts[0]["left"], controlsDicts[0]["right"]]:
-                        playerArmList[0].armState = CluSprites.ArmStates.OFF_SCREEN
-                        if playerList[0].playerState in [CluSprites.PlayerStates.SWINGING,
-                                                         CluSprites.PlayerStates.HITTING_PLAYER_SWINGING]:
-                            playerList[0].playerState = CluSprites.PlayerStates.MOVING
-                    if len(playerList) > 1:
-                        if pygame.key.name(event.key) in [controlsDicts[1]["up"], controlsDicts[1]["down"],
-                                                          controlsDicts[1]["left"], controlsDicts[1]["right"]]:
-                            playerArmList[1].armState = CluSprites.ArmStates.OFF_SCREEN
-                            if playerList[1].playerState in [CluSprites.PlayerStates.SWINGING,
-                                                             CluSprites.PlayerStates.HITTING_PLAYER_SWINGING]:
-                                playerList[1].playerState = CluSprites.PlayerStates.MOVING
+                # if event.type == pygame.KEYUP:
+                #     if pygame.key.name(event.key) in [controlsDicts[0]["up"], controlsDicts[0]["down"],
+                #                                       controlsDicts[0]["left"], controlsDicts[0]["right"]]:
+                #         playerArmList[0].armState = CluSprites.ArmStates.OFF_SCREEN
+                #         if playerList[0].playerState in [CluSprites.PlayerStates.SWINGING,
+                #                                          CluSprites.PlayerStates.HITTING_PLAYER_SWINGING]:
+                #             playerList[0].playerState = CluSprites.PlayerStates.MOVING
+                #     if len(playerList) > 1:
+                #         if pygame.key.name(event.key) in [controlsDicts[1]["up"], controlsDicts[1]["down"],
+                #                                           controlsDicts[1]["left"], controlsDicts[1]["right"]]:
+                #             playerArmList[1].armState = CluSprites.ArmStates.OFF_SCREEN
+                #             if playerList[1].playerState in [CluSprites.PlayerStates.SWINGING,
+                #                                              CluSprites.PlayerStates.HITTING_PLAYER_SWINGING]:
+                #                 playerList[1].playerState = CluSprites.PlayerStates.MOVING
                 if event.type == pygame.KEYDOWN:
                     if pygame.key.name(event.key) == controlsDicts[0]["pause"]:
                         pygame.mixer.music.pause()
@@ -311,69 +305,99 @@ def playLevel(playerList, playerArmList, level, levelCount):
                                 playerArmList[1].extendArm(directionChosen)
                         if pygame.key.name(event.key) == controlsDicts[1]["shoot"]:
                             shootWave(playerList[1])
+                heldKeys = pygame.key.get_pressed()
+                if not any((heldKeys[pygame.K_UP], heldKeys[pygame.K_DOWN], heldKeys[pygame.K_LEFT],
+                           heldKeys[pygame.K_RIGHT])):
+                    playerArmList[0].armState = CluSprites.ArmStates.OFF_SCREEN
+                    if playerList[0].playerState in [CluSprites.PlayerStates.SWINGING,
+                                                     CluSprites.PlayerStates.HITTING_PLAYER_SWINGING]:
+                        playerList[0].playerState = CluSprites.PlayerStates.MOVING
+                    playerList[0].adjustPosition()
+                if len(playerList) > 1:
+                    if not any((heldKeys[pygame.K_KP8], heldKeys[pygame.K_KP2], heldKeys[pygame.K_KP4],
+                                heldKeys[pygame.K_KP6])):
+                        playerArmList[1].armState = CluSprites.ArmStates.OFF_SCREEN
+                        if playerList[1].playerState in [CluSprites.PlayerStates.SWINGING,
+                                                         CluSprites.PlayerStates.HITTING_PLAYER_SWINGING]:
+                            playerList[1].playerState = CluSprites.PlayerStates.MOVING
+                        playerList[1].adjustPosition()
             SCREEN.fill(BLACK)
             blitLevelData(playerList, level, timeCount)
             if not levelComplete:
                 for group in CluSprites.allGroups:
                     for sprite in group:
                         SCREEN.blit(sprite.image, sprite.coordinates)
-                # for sprite in CluSprites.playerGroup:
+                # for sprite in CluSprites.armGroup:
+                #     pygame.draw.rect(SCREEN, WHITE, sprite.wallCollisionRect)
+                # for sprite in CluSprites.goldGroup:
                 #     pygame.draw.rect(SCREEN, WHITE, sprite.collisionRect)
-                if frameCount % 5 == 0:
-                    timeCount = max(0, timeCount - 1)
-                for group in CluSprites.allGroups:
-                    group.update()
-                if timeCount > 200 and playingLowTimeMusic:
-                    playingLowTimeMusic = False
-                    pygame.mixer.music.load(LEVEL_MUSIC)
-                    pygame.mixer.music.stop()
-                    pygame.mixer.music.play(-1)
-                if timeCount == 200 and not gameOverTextCreated:
-                    playingLowTimeMusic = True
-                    pygame.mixer.music.load(LOW_TIME_MUSIC)
-                    pygame.mixer.music.stop()
-                    pygame.mixer.music.play(-1)
-                if timeCount == 0:
-                    if not timeReachedZero:
-                        frameCount = 0
-                        timeReachedZero = True
-                        playSound("death.wav")
-                        for player in playerList:
-                            player.playerState = CluSprites.PlayerStates.EXPLODING
-                            pygame.mixer.music.stop()
-                            player.frameCount = 0
-                    if frameCount == 170 and any(player.lives > 0 for player in playerList):
-                        timeReachedZero = False
-                        timeCount = 400
+                for sprite in level.levelBorderRects:
+                     pygame.draw.rect(SCREEN, WHITE, sprite)
+                if pausedPlayerNumber == 0:
+                    if frameCount % 5 == 0:
+                        timeCount = max(0, timeCount - 1)
+                    for group in CluSprites.allGroups:
+                        group.update()
+                    if timeCount > 200 and playingLowTimeMusic:
+                        playingLowTimeMusic = False
                         pygame.mixer.music.load(LEVEL_MUSIC)
+                        pygame.mixer.music.stop()
                         pygame.mixer.music.play(-1)
-                if all(player.playerState == CluSprites.PlayerStates.DEAD for player in playerList):
-                    if not gameOverTextCreated:
-                        frameCount = 0
-                        gameOverTextSprite = CluSprites.GameOverTextSprite()
-                        CluSprites.itemGroup.add(gameOverTextSprite)
+                    if timeCount == 200 and all(value < 1 for value in gameOverTextActive):
+                        playingLowTimeMusic = True
+                        pygame.mixer.music.load(LOW_TIME_MUSIC)
                         pygame.mixer.music.stop()
-                        pygame.mixer.music.load(GAME_OVER_MUSIC)
-                        pygame.mixer.music.play()
-                        gameOverTextCreated = True
-                    if frameCount == 300:
-                        CluSprites.itemGroup.remove(gameOverTextSprite)
-                        pygame.mixer.music.stop()
-                        pygame.mixer.music.load(LEVEL_END_MUSIC)
-                        pygame.mixer.music.play()
+                        pygame.mixer.music.play(-1)
+                    if timeCount == 0:
+                        if not timeReachedZero:
+                            frameCount = 0
+                            timeReachedZero = True
+                            playSound("death.wav")
+                            for player in playerList:
+                                player.playerState = CluSprites.PlayerStates.EXPLODING
+                                pygame.mixer.music.stop()
+                                player.frameCount = 0
+                        if frameCount == 170 and any(player.lives > 0 for player in playerList):
+                            timeReachedZero = False
+                            timeCount = 400
+                            pygame.mixer.music.load(LEVEL_MUSIC)
+                            pygame.mixer.music.play(-1)
+                    for player in playerList:
+                        if player.playerState == CluSprites.PlayerStates.DEAD:
+                            if gameOverTextActive[player.playerNumber - 1] == 0 and not\
+                                    any(value == 1 for value in gameOverTextActive):
+                                frameCount = 0
+                                gameOverTextSprite = CluSprites.GameOverTextSprite(player.playerNumber)
+                                gameOverTextSprite.initialize()
+                                pygame.mixer.music.stop()
+                                pygame.mixer.music.load(GAME_OVER_MUSIC)
+                                pygame.mixer.music.play()
+                                gameOverTextActive[player.playerNumber - 1] = 1
+                            if gameOverTextActive[player.playerNumber - 1] == 1 and frameCount == 300:
+                                gameOverTextActive[player.playerNumber - 1] = -1
+                                pygame.mixer.music.stop()
+                                if all(value == -1 for value in gameOverTextActive):
+                                    pygame.mixer.music.load(LEVEL_END_MUSIC)
+                                else:
+                                    if timeCount > 200:
+                                        pygame.mixer.music.load(LEVEL_MUSIC)
+                                    else:
+                                        pygame.mixer.music.load(LOW_TIME_MUSIC)
+                                CluSprites.textGroup.empty()
+                                pygame.mixer.music.play()
 
-            else:
-                if not alreadyLoadedLevelEnd:
-                    frameCount = 0
-                    pygame.mixer.music.load(LEVEL_END_MUSIC)
-                    pygame.mixer.music.stop()
-                    pygame.mixer.music.play()
-                    alreadyLoadedLevelEnd = True
-                    level.isFlashing = True
-                elif frameCount > 330:
-                    # Add level end
-                    pygame.display.update()
-                    pygame.time.delay(10000)
+            # elif pausedPlayerNumber == 0:
+            #     if not alreadyLoadedLevelEnd:
+            #         frameCount = 0
+            #         pygame.mixer.music.load(LEVEL_END_MUSIC)
+            #         pygame.mixer.music.stop()
+            #         pygame.mixer.music.play()
+            #         alreadyLoadedLevelEnd = True
+            #         level.isFlashing = True
+            #     elif frameCount > 330:
+            #         # Add level end
+            #         pygame.display.update()
+            #         pygame.time.delay(10000)
             pygame.display.update()
             frameCount += 1
             CLOCK.tick(FPS)
@@ -415,18 +439,27 @@ def shootWave(player):
         CluSprites.attackGroup.add(newWave)
 
 
-def setUpGold(level):
+def setUpLevel(level):
     level.initialize()
     goldList = []
+    rubberList = []
     for (x, y) in level.goldTilesVertical:
         goldList.append(CluSprites.GoldSprite())
-        goldList[-1].setCoordinates(-25 + 48 * x, 49 + 48 * y)
-        goldList[-1].goldState = CluSprites.OtherState.REVEALED
+        goldList[-1].initialize(-25 + 48 * x, 49 + 48 * y)
     for (x, y) in level.goldTilesHorizontal:
         goldList.append(CluSprites.GoldSprite())
-        goldList[-1].setCoordinates(-1 + 48 * x, 25 + 48 * y)
         goldList[-1].isHorizontal = True
-        goldList[-1].goldState = CluSprites.OtherState.REVEALED
+        goldList[-1].initialize(-1 + 48 * x, 25 + 48 * y)
+    for (x, y) in level.rubberTilesVertical:
+        rubberList.append(CluSprites.RubberTrapSprite())
+        rubberList[-1].setCoordinates(-36 + 48 * x, 36 + 48 * y)
+    for (x, y) in level.rubberTilesHorizontal:
+        rubberList.append(CluSprites.RubberTrapSprite())
+        rubberList[-1].isHorizontal = True
+        rubberList[-1].setCoordinates(-14 + 48 * x, 14 + 48 * y)
+    CluSprites.blackHoleGroup.add(CluSprites.BlackHoleSprite() for _ in range(len(level.blackHolePositions)))
+    for (x, y), hole in zip(level.blackHolePositions, CluSprites.blackHoleGroup):
+        hole.initialize(-1 + 48 * x, 49 + 48 * y)
 
 
 def setTextCoordinates(value, numberOfPlayers):

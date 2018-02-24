@@ -63,8 +63,8 @@ class BoardOneLevel(Level):
         self.image.set_colorkey(BLACK)
         self.standardImage = getImage("background_1A.png")
         self.lightImage = getImage("background_1B.png")
-        self.playerStartPosition = [(2, 1), (10, 1)]
-        # self.playerStartPosition = [(2, 1), (3, 2)]
+        # self.playerStartPosition = [(2, 1), (10, 1)]
+        self.playerStartPosition = [(2, 1), (3, 2)]
         self.blackHolePositions = [(5, 4)]
         self.levelBorderRects = [pygame.Rect(0, 0, 80, 84), pygame.Rect(0, 0, 512, 36), pygame.Rect(0, 0, 39, 448),
                                  pygame.Rect(432, 0, 80, 84), pygame.Rect(477, 0, 39, 448),
@@ -108,7 +108,8 @@ class BoardFourLevel(Level):
         self.image.set_colorkey(BLACK)
         self.standardImage = getImage("background_4A.png")
         self.lightImage = getImage("background_4B.png")
-        self.playerStartPosition = [(5, 0), (7, 0)]
+        # self.playerStartPosition = [(5, 0), (7, 0)]
+        self.playerStartPosition = [(5, 0), (5, 5)]
         self.blackHolePositions = [(2, 2), (8, 2), (4, 6), (6, 6)]
         self.levelBorderRects = [pygame.Rect(0, 0, 512, 36), pygame.Rect(238, 0, 36, 132),
                                  pygame.Rect(238, 346, 36, 132), pygame.Rect(0, 426, 512, 36),
