@@ -44,6 +44,7 @@ PINK = (250, 115, 180)
 ORANGE = (250, 150, 55)
 CYAN = (60, 180, 250)
 
+pygame.mixer.pre_init(buffer=512)
 pygame.init()
 pygame.font.init()
 
@@ -190,21 +191,22 @@ def displayTitleScreen(playerOneScore=0, playerTwoScore=0):
 
 
 def animateDemo():
-    SCREEN.fill(BLACK)
-    frameCount = 0
-    playerListDemo = [CluSprites.PlayerSprite(), CluSprites.PlayerSprite(2)]
-    playerListDemo[0].lives = 1
-    playerListDemo[1].lives = 1
-    levelDemo = CluLevels.HOUSE
-    blackHoleDemo = [CluSprites.BlackHoleSprite()]
-    blitLevelData(playerListDemo, levelDemo, 800)
-    for num, player in enumerate(playerListDemo):
-        player.initialize(-49 + 48 * levelDemo.playerStartPosition[num][0],
-                          49 + 48 * levelDemo.playerStartPosition[num][1])
-
-    while True:
-        pygame.display.update()
-        pass
+    pass
+    # SCREEN.fill(BLACK)
+    # frameCount = 0
+    # playerListDemo = [CluSprites.PlayerSprite(), CluSprites.PlayerSprite(2)]
+    # playerListDemo[0].lives = 1
+    # playerListDemo[1].lives = 1
+    # levelDemo = CluLevels.HOUSE
+    # blackHoleDemo = [CluSprites.BlackHoleSprite()]
+    # blitLevelData(playerListDemo, levelDemo, 800)
+    # for num, player in enumerate(playerListDemo):
+    #     player.initialize(-48 + 48 * levelDemo.playerStartPosition[num][0],
+    #                       49 + 48 * levelDemo.playerStartPosition[num][1])
+    #
+    # while True:
+    #     pygame.display.update()
+    #     pass
 
 
 def playLevel(playerList, playerArmList, level, levelCount):
@@ -234,11 +236,10 @@ def playLevel(playerList, playerArmList, level, levelCount):
     pygame.mixer.music.play(-1)
 
     for num, player in enumerate(playerList):
-        player.initialize(-49 + 48 * level.playerStartPosition[num][0],
+        player.initialize(-48 + 48 * level.playerStartPosition[num][0],
                           49 + 48 * level.playerStartPosition[num][1])
         CluSprites.PlayerSprite.currentLevel = level
         CluSprites.GoldSprite.levelCount = levelCount
-        player.lives = 0
 
     while True:
         while pausedPlayerNumber != 0:
@@ -311,33 +312,42 @@ def playLevel(playerList, playerArmList, level, levelCount):
                     playerArmList[0].armState = CluSprites.ArmStates.OFF_SCREEN
                     if playerList[0].playerState in [CluSprites.PlayerStates.SWINGING,
                                                      CluSprites.PlayerStates.HITTING_PLAYER_SWINGING]:
-                        playerList[0].playerState = CluSprites.PlayerStates.MOVING
-                    playerList[0].adjustPosition()
+                        playerList[0].playerState = CluSprites.PlayerStates.FINISHED_SWINGING
+                        playerList[0].swingFrameCount = 0
+                        playerList[0].adjustPosition()
                 if len(playerList) > 1:
                     if not any((heldKeys[pygame.K_KP8], heldKeys[pygame.K_KP2], heldKeys[pygame.K_KP4],
                                 heldKeys[pygame.K_KP6])):
                         playerArmList[1].armState = CluSprites.ArmStates.OFF_SCREEN
                         if playerList[1].playerState in [CluSprites.PlayerStates.SWINGING,
                                                          CluSprites.PlayerStates.HITTING_PLAYER_SWINGING]:
-                            playerList[1].playerState = CluSprites.PlayerStates.MOVING
-                        playerList[1].adjustPosition()
+                            playerList[1].playerState = CluSprites.PlayerStates.FINISHED_SWINGING
+                            playerList[1].swingFrameCount = 0
+                            playerList[1].adjustPosition()
             SCREEN.fill(BLACK)
             blitLevelData(playerList, level, timeCount)
             if not levelComplete:
                 for group in CluSprites.allGroups:
+                    group.update()
                     for sprite in group:
+                        # if sprite not in playerList:
                         SCREEN.blit(sprite.image, sprite.coordinates)
                 # for sprite in CluSprites.armGroup:
                 #     pygame.draw.rect(SCREEN, WHITE, sprite.wallCollisionRect)
                 # for sprite in CluSprites.goldGroup:
                 #     pygame.draw.rect(SCREEN, WHITE, sprite.collisionRect)
-                for sprite in level.levelBorderRects:
-                     pygame.draw.rect(SCREEN, WHITE, sprite)
+                # for sprite in level.levelBorderRects:
+                #      pygame.draw.rect(SCREEN, WHITE, sprite)
+                # for sprite in CluSprites.armGroup:
+                #     s = pygame.Surface((12, 12))  # the size of your rect
+                #     s.set_alpha(128)  # alpha level
+                #     s.fill(WHITE)  # this fills the entire surface
+                #     SCREEN.blit(s, (sprite.collisionRect[0], sprite.collisionRect[1]))
                 if pausedPlayerNumber == 0:
                     if frameCount % 5 == 0:
                         timeCount = max(0, timeCount - 1)
-                    for group in CluSprites.allGroups:
-                        group.update()
+                    # for group in CluSprites.allGroups:
+                    #     group.update()
                     if timeCount > 200 and playingLowTimeMusic:
                         playingLowTimeMusic = False
                         pygame.mixer.music.load(LEVEL_MUSIC)
@@ -432,7 +442,8 @@ def shootWave(player):
     sonicWavesFromPlayer = [sprite for sprite in CluSprites.attackGroup if
                             sprite.firingPlayerNumber == player.playerNumber]
     if len(sonicWavesFromPlayer) < 2 and player.playerState in [CluSprites.PlayerStates.MOVING,
-                                                                CluSprites.PlayerStates.SWINGING]:
+                                                                CluSprites.PlayerStates.SWINGING,
+                                                                CluSprites.PlayerStates.FINISHED_SWINGING]:
         playSound("shoot_wave.wav")
         newWave = CluSprites.SonicWaveSprite(player.facingDirection, player.playerNumber)
         newWave.setInitialCoordinates(player.coordinates[0], player.coordinates[1])
