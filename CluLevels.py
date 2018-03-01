@@ -17,8 +17,13 @@ def getImage(imagePath):
     image = _imageLibrary.get(imagePath)
     if image is None:
         fullPath = os.path.join(backgroundFolder, imagePath)
-        image = pygame.image.load(fullPath).convert()
-        _imageLibrary[imagePath] = image
+        try:
+            image = pygame.image.load(fullPath).convert()
+            _imageLibrary[imagePath] = image
+        except pygame.error:
+            print("ERROR: Cannot find image '{}'".format(imagePath))
+            pygame.quit()
+            sys.exit()
     return image
 
 
@@ -32,8 +37,9 @@ class Level:
         self.rubberTilesVertical = rubberTilesVertical
         self.goldTilesHorizontal = goldTilesHorizontal
         self.goldTilesVertical = goldTilesVertical
+        self.activeRubberTraps = []
         self.goldCount = 0
-        self.playerStartPosition = (0, 0)
+        self.playerStartPosition = [(0, 0), (0, 0), (0, 0), (0, 0)]
         self.blackHolePositions = []
         self.levelBorderRects = []
         self.isFlashing = False
@@ -63,8 +69,7 @@ class BoardOneLevel(Level):
         self.image.set_colorkey(BLACK)
         self.standardImage = getImage("background_1A.png")
         self.lightImage = getImage("background_1B.png")
-        # self.playerStartPosition = [(2, 1), (10, 1)]
-        self.playerStartPosition = [(2, 1), (3, 2)]
+        self.playerStartPosition = [(2, 1), (10, 1), (3, 7), (9, 7)]
         self.blackHolePositions = [(5, 4)]
         self.levelBorderRects = [pygame.Rect(0, 0, 80, 84), pygame.Rect(0, 0, 512, 36), pygame.Rect(0, 0, 39, 448),
                                  pygame.Rect(432, 0, 80, 84), pygame.Rect(477, 0, 39, 448),
@@ -79,7 +84,7 @@ class BoardTwoLevel(Level):
         self.image.set_colorkey(BLACK)
         self.standardImage = getImage("background_2A.png")
         self.lightImage = getImage("background_2B.png")
-        self.playerStartPosition = [(5, 0), (7, 0)]
+        self.playerStartPosition = [(5, 0), (7, 0), (2, 5), (10, 5)]
         self.blackHolePositions = [(2, 6), (8, 6)]
         self.levelBorderRects = [pygame.Rect(0, 0, 80, 84), pygame.Rect(0, 0, 512, 36), pygame.Rect(0, 0, 39, 448),
                                  pygame.Rect(432, 0, 80, 84), pygame.Rect(477, 0, 39, 448),
@@ -94,7 +99,7 @@ class BoardThreeLevel(Level):
         self.image.set_colorkey(BLACK)
         self.standardImage = getImage("background_3A.png")
         self.lightImage = getImage("background_3B.png")
-        self.playerStartPosition = [(6, 1), (6, 6)]
+        self.playerStartPosition = [(6, 1), (6, 6), (2, 3), (10, 3)]
         self.blackHolePositions = [(4, 4), (6, 4)]
         self.levelBorderRects = [pygame.Rect(0, 0, 512, 36), pygame.Rect(0, 0, 39, 448), pygame.Rect(477, 0, 39, 448),
                                  pygame.Rect(0, 426, 512, 36), pygame.Rect(190, 0, 134, 84),
@@ -108,8 +113,7 @@ class BoardFourLevel(Level):
         self.image.set_colorkey(BLACK)
         self.standardImage = getImage("background_4A.png")
         self.lightImage = getImage("background_4B.png")
-        # self.playerStartPosition = [(5, 0), (7, 0)]
-        self.playerStartPosition = [(5, 0), (5, 5)]
+        self.playerStartPosition = [(5, 0), (7, 0), (2, 7), (10, 7)]
         self.blackHolePositions = [(2, 2), (8, 2), (4, 6), (6, 6)]
         self.levelBorderRects = [pygame.Rect(0, 0, 512, 36), pygame.Rect(238, 0, 36, 132),
                                  pygame.Rect(238, 346, 36, 132), pygame.Rect(0, 426, 512, 36),
@@ -123,8 +127,9 @@ class BoardFiveLevel(Level):
         self.image.set_colorkey(BLACK)
         self.standardImage = getImage("background_5A.png")
         self.lightImage = getImage("background_5B.png")
-        self.playerStartPosition = [(2, 0), (10, 0)]
+        self.playerStartPosition = [(2, 0), (10, 0), (4, 7), (6, 7)]
         self.blackHolePositions = [(2, 4), (4, 4), (6, 4), (8, 4)]
+        self.activeRubberTraps = [(1, 4), (9, 4)]
         self.levelBorderRects = [pygame.Rect(0, 0, 512, 36), pygame.Rect(238, 0, 40, 84), pygame.Rect(0, 426, 512, 36),
                                  pygame.Rect(238, 380, 40, 84), pygame.Rect(0, 0, 36, 84), pygame.Rect(478, 0, 36, 84),
                                  pygame.Rect(0, 380, 36, 84), pygame.Rect(478, 380, 36, 84)]
@@ -144,8 +149,8 @@ class BonusLevel(Level):
         self.image.set_colorkey(BLACK)
         self.standardImage = getImage("background_6A.png")
         self.lightImage = getImage("background_6B.png")
-        self.playerStartPosition = [(5, 1), (7, 1)]
-        self.playerStartPosition = [(2, 4), (9, 4)]
+        self.playerStartPosition = [(5, 1), (7, 1), (4, 6), (8, 6)]
+        # self.playerStartPosition = [(2, 4), (9, 4)]
         self.levelBorderRects = [pygame.Rect(0, 0, 512, 36), pygame.Rect(188, 186, 136, 94),
                                  pygame.Rect(0, 426, 512, 36), pygame.Rect(0, 0, 39, 448),
                                  pygame.Rect(477, 0, 39, 448)]
@@ -312,11 +317,17 @@ KEY_PLUS = BoardFiveLevel([(3, 4), (5, 4), (7, 4)], [],
                            (3, 5), (5, 5), (6, 5), (8, 5), (10, 5), (2, 6), (3, 6), (8, 6), (9, 6)])
 BONUS_LEVEL = BonusLevel()
 
-boardOneLevels = [HEART, HOUSE, FACE, HUMAN, BUBBLES, KE, TELEVISION, KOOPA]
-boardTwoLevels = [CLOWN, SPADE, MOUSE, EAGLE, RAIN, CAR, MUSHROOM, SKULL]
-boardThreeLevels = [SUBMARINE, GLASSES, KOALA, BUTTERFLY, FISH, CLU_CLU, CROWN, SWORD_SHIELD]
-boardFourLevels = [HOLE, KEY, RIBBON, LETTER_H, PUNCTUATION, FROWN, PYTHON, FLIP]
-boardFiveLevels = [SPIDER, LETTER_X, BOX, DIAMOND, INVERTED_DIAMOND, BOX_PLUS, CRUSHER, KEY_PLUS]
+# boardOneLevels = [HEART, HOUSE, FACE, HUMAN, BUBBLES, KE, TELEVISION, KOOPA]
+# boardTwoLevels = [CLOWN, SPADE, MOUSE, EAGLE, RAIN, CAR, MUSHROOM, SKULL]
+# boardThreeLevels = [SUBMARINE, GLASSES, KOALA, BUTTERFLY, FISH, CLU_CLU, CROWN, SWORD_SHIELD]
+# boardFourLevels = [HOLE, KEY, RIBBON, LETTER_H, PUNCTUATION, FROWN, PYTHON, FLIP]
+# boardFiveLevels = [SPIDER, LETTER_X, BOX, DIAMOND, INVERTED_DIAMOND, BOX_PLUS, CRUSHER, KEY_PLUS]
+boardOneLevels = [HEART, HOUSE, FACE, HUMAN]
+boardTwoLevels = [CLOWN, SPADE, MOUSE, EAGLE]
+boardThreeLevels = [SUBMARINE, GLASSES, KOALA, BUTTERFLY]
+boardFourLevels = [HOLE, KEY, RIBBON, LETTER_H]
+boardFiveLevels = [SPIDER, LETTER_X, BOX, DIAMOND]
+
 allBoardsList = [boardOneLevels, boardTwoLevels, boardThreeLevels, boardFourLevels, boardFiveLevels]
 
 
