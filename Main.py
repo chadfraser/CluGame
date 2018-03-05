@@ -132,10 +132,9 @@ def displayTitleScreen(playerOneScore=0, playerTwoScore=0, playerThreeScore=0, p
     highScore = getHighScore()
     titleImageOne = CluSprites.TitleSprite()
     titleImageTwo = CluSprites.TitleSprite("right")
-    subtitleImage = getImage(titleFolder, "title_main_1.png")
-    lightTitleImage = getImage(titleFolder, "title_main_2.png")
-    subtitleImage.set_colorkey(BLACK)
-    lightTitleImage.set_colorkey(BLACK)
+    titleImageTwo.coordinates = (274, 54)
+    subtitleImage = CluSprites.SubtitleSprite()
+
     subtitleText = FONT.render("SECRETS OF OLD CLU CLU LAND", False, WHITE)
     playText = FONT.render("PLAY GAME", False, CYAN)
     changeText = FONT.render("CHANGE CONTROLS", False, CYAN)
@@ -155,6 +154,7 @@ def displayTitleScreen(playerOneScore=0, playerTwoScore=0, playerThreeScore=0, p
         titleImageTwo.setTitleImageBackwards()
         cursorLocation = (150, 310)
         looping = True
+        subtitleImage.frameCount = titleImageOne.frameCount = titleImageTwo.frameCount = 0
 
         while looping:
             for event in pygame.event.get():
@@ -174,7 +174,7 @@ def displayTitleScreen(playerOneScore=0, playerTwoScore=0, playerThreeScore=0, p
                                 playerList.append(player)
                                 playerArmList.append(playerArm)
                             while any(player.playerState != CluSprites.PlayerStates.DEAD for player in playerList):
-                                playLevel(playerList, playerArmList, CluLevels.MOUSE, 0)  # ###############
+                                playLevel(playerList, playerArmList, CluLevels.HOUSE, 0)  # ###############
                             playerScoresList = [player.score for player in playerList]
                             return playerScoresList
                         else:
@@ -196,14 +196,9 @@ def displayTitleScreen(playerOneScore=0, playerTwoScore=0, playerThreeScore=0, p
             SCREEN.blit(highScoreText, (172, 375))
             for text, coords in zip(playerScoreTexts, scoreTextCoordinates):
                 SCREEN.blit(text, coords)
-            for sprite in [titleImageOne, titleImageTwo]:
+            for sprite in [titleImageOne, titleImageTwo, subtitleImage]:
                 sprite.update()
-            if 500 > frameCount or frameCount % 10 > 4:
-                SCREEN.blit(subtitleImage, (50, 22))
-                SCREEN.blit(titleImageOne.image, (98, 54))
-                SCREEN.blit(titleImageTwo.image, (274, 54))
-            elif 499 < frameCount and frameCount % 10 < 5:
-                SCREEN.blit(lightTitleImage, (50, 22))
+                SCREEN.blit(sprite.image, sprite.coordinates)
             if 740 < frameCount:
                 animateDemo()
                 looping = False
@@ -440,9 +435,20 @@ def shootWave(player):
     if len(sonicWavesFromPlayer) < 2 and player.playerState in [CluSprites.PlayerStates.MOVING,
                                                                 CluSprites.PlayerStates.SWINGING,
                                                                 CluSprites.PlayerStates.FINISHED_SWINGING]:
+        waveCoordinates = player.coordinates
+        if player.isFacingHorizontally():
+            if 0 < player.coordinates[1] % 48 < 24:
+                waveCoordinates = (player.coordinates[0], player.coordinates[1] - (player.coordinates[1] % 48))
+            elif player.coordinates[1] % 48 > 23:
+                waveCoordinates = (player.coordinates[0], player.coordinates[1] + (48 - player.coordinates[1] % 48))
+        else:
+            if 0 < player.coordinates[0] % 48 < 24:
+                waveCoordinates = (player.coordinates[0] - (player.coordinates[0] % 48), player.coordinates[1])
+            elif player.coordinates[0] % 48 > 23:
+                waveCoordinates = (player.coordinates[0] + (48 - player.coordinates[0] % 48), player.coordinates[1])
         playSound("shoot_wave.wav")
         newWave = CluSprites.SonicWaveSprite(player.facingDirection, player.playerNumber)
-        newWave.setInitialCoordinates(player.coordinates[0], player.coordinates[1])
+        newWave.setInitialCoordinates(waveCoordinates[0], waveCoordinates[1])
         CluSprites.attackGroup.add(newWave)
 
 
@@ -501,9 +507,9 @@ def setTextCoordinates(value, numberOfPlayers):
     return textCoordinates
 
 
-def displayChangeControlMenu(subtitle, titleImageOne, titleImageTwo, numberOfPlayers):
-    titleImageOne.setTitleImage()
-    titleImageTwo.setTitleImage()
+def displayChangeControlMenu(subtitleImage, titleImageOne, titleImageTwo, numberOfPlayers):
+    for sprite in [subtitleImage, titleImageOne, titleImageTwo]:
+        sprite.setTitleImage()
     controlToChange = "SHOOT"
     frameCount = 0
     currentPlayerIndex = 1
@@ -530,9 +536,8 @@ def displayChangeControlMenu(subtitle, titleImageOne, titleImageTwo, numberOfPla
         SCREEN.fill(BLACK)
         subtitleText = FONT.render("SECRETS OF OLD CLU CLU LAND", False, WHITE)
         SCREEN.blit(subtitleText, (42, 275))
-        SCREEN.blit(subtitle, (50, 22))
-        SCREEN.blit(titleImageOne.image, (98, 54))
-        SCREEN.blit(titleImageTwo.image, (274, 54))
+        for sprite in [titleImageOne, titleImageTwo, subtitleImage]:
+            SCREEN.blit(sprite.image, sprite.coordinates)
         if controlToChange == "UP":
             textCoordinates = setTextCoordinates(23, numberOfPlayers)
         elif controlToChange == "DOWN":
@@ -581,9 +586,9 @@ def changeControlInput(controlToChange, event, currentPlayerIndex, numberOfPlaye
     return controlToChange
 
 
-def chooseNumberOfPlayers(subtitle, titleImageOne, titleImageTwo, textToDisplay):
-    titleImageOne.setTitleImage()
-    titleImageTwo.setTitleImage()
+def chooseNumberOfPlayers(subtitleImage, titleImageOne, titleImageTwo, textToDisplay):
+    for sprite in [subtitleImage, titleImageOne, titleImageTwo]:
+        sprite.setTitleImage()
     subtitleText = FONT.render("SECRETS OF OLD CLU CLU LAND", False, WHITE)
     playerNumbersText = [FONT.render("1 PLAYER", False, CYAN),
                          FONT.render("2 PLAYER", False, CYAN),
@@ -620,9 +625,8 @@ def chooseNumberOfPlayers(subtitle, titleImageOne, titleImageTwo, textToDisplay)
                         cursorLocation = (cursorLocation[0], 310)
         SCREEN.fill(BLACK)
         SCREEN.blit(subtitleText, (42, 275))
-        SCREEN.blit(subtitle, (50, 22))
-        SCREEN.blit(titleImageOne.image, (98, 54))
-        SCREEN.blit(titleImageTwo.image, (274, 54))
+        for sprite in [titleImageOne, titleImageTwo, subtitleImage]:
+                SCREEN.blit(sprite.image, sprite.coordinates)
         for text, coords in zip(playerNumbersText, playerTextCoordinates):
             SCREEN.blit(text, coords)
         for coords in optionTextCoordinates:
