@@ -2,6 +2,7 @@ import pygame
 import os
 import sys
 import CluSprites
+import DemoSprites
 import CluLevels
 
 
@@ -47,20 +48,23 @@ def playSound(soundFile):
 
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
+GREY = (100, 100, 100)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 GREEN = (0, 255, 0)
-PINK = (250, 115, 180)
+YELLOW = (255, 200, 15)
 HOT_PINK = (255, 0, 95)
 ORANGE = (250, 150, 55)
+PINK = (250, 115, 180)
 CYAN = (60, 180, 250)
-YELLOW = (255, 200, 15)
+PURPLE = (168, 0, 16)
 
 pygame.mixer.pre_init(buffer=512)
 pygame.init()
 pygame.font.init()
 
 FONT = pygame.font.Font("Nintendo NES.ttf", 16)
+DEMO_FONT = pygame.font.Font("Nintendo NES.ttf", 48)
 
 # gameIcon = getImage(spriteFolder, "game_display_icon.png")
 # gameIcon.set_colorkey(WHITE)
@@ -73,6 +77,7 @@ CLOCK = pygame.time.Clock()
 FPS = 60
 
 TITLE_MUSIC = os.path.join(musicFolder, "music_title.mp3")
+DEMO_MUSIC = os.path.join(musicFolder, "music_demo.mp3")
 LEVEL_START_MUSIC = os.path.join(musicFolder, "music_level_start.mp3")
 LEVEL_MUSIC = os.path.join(musicFolder, "music_level.mp3")
 LOW_TIME_MUSIC = os.path.join(musicFolder, "music_low_time.mp3")
@@ -111,7 +116,10 @@ def blitLevelData(playerList, level, time):
         playerLivesData.append([FONT.render("<", False, colors[num]),
                                 FONT.render("{}".format(min(player.lives, 9)), False, WHITE),
                                 FONT.render(">", False, colors[num])])
-    goldText = FONT.render("LAST,{:02d}".format(level.goldCount), False, WHITE)
+    goldText = FONT.render("LAST,{:02d}".format(len([gold for gold in CluSprites.goldGroup if gold.goldState in
+                                                     [CluSprites.OtherState.UPSIDE_DOWN,
+                                                      CluSprites.OtherState.FLIPPING_DOWN,
+                                                      CluSprites.OtherState.OFF_SCREEN]])), False, WHITE)
     timeText = FONT.render("TIME,{:03d}".format(time), False, WHITE)
     SCREEN.blit(level.image, (0, 0))
     SCREEN.blit(goldText, (132, 16))
@@ -208,21 +216,131 @@ def displayTitleScreen(playerOneScore=0, playerTwoScore=0, playerThreeScore=0, p
 
 
 def animateDemo():
-    return
-    # SCREEN.fill(BLACK)
-    # frameCount = 0
-    # playerListDemo = [CluSprites.PlayerSprite(), CluSprites.PlayerSprite(2)]
-    # playerListDemo[0].lives = 1
-    # playerListDemo[1].lives = 1
-    # levelDemo = CluLevels.HOUSE
-    # blackHoleDemo = [CluSprites.BlackHoleSprite()]
-    # blitLevelData(playerListDemo, levelDemo, 800)
-    # for num, player in enumerate(playerListDemo):
-    #     player.initialize(-48 + 48 * levelDemo.playerStartPosition[num][0],
-    #                       49 + 48 * levelDemo.playerStartPosition[num][1])
-    #
-    # while True:
-    #     pygame.display.update()
+    pygame.mixer.music.load(DEMO_MUSIC)
+    pygame.mixer.music.play()
+    playerNames = [DEMO_FONT.render("BUBBLES", False, RED), DEMO_FONT.render("GLOOPY", False, GREEN),
+                   DEMO_FONT.render("NEMO", False, BLUE), DEMO_FONT.render("DIZZY", False, YELLOW)]
+    playerNameCoordinates = [(103, 61), (127, 61), (145, 337), (122, 337)]
+
+    displayRects = [pygame.Rect(20, -260, 380, 260), pygame.Rect(480, 180, 380, 260), pygame.Rect(120, 444, 380, 260),
+                    pygame.Rect(-380, 20, 380, 260)]
+    coverRects = [pygame.Rect(20, -260, 380, 260), pygame.Rect(480, 180, 380, 260), pygame.Rect(120, 444, 380, 260),
+                    pygame.Rect(-380, 20, 380, 260)]
+    nameRects = [pygame.Rect(86, 47, 540, 100), pygame.Rect(86, 46, 540, 100), pygame.Rect(57, 324, 540, 100),
+                 pygame.Rect(57, 324, 540, 100)]
+    spriteCoords = [(0, 4), (-4, 0), (0, -4), (4, 0)]
+
+    for demoNum in range(4):
+        frameCount = 0
+        DemoSprites.demoGroup.empty()
+        DemoSprites.initialize()
+        SCREEN.fill(GREY)
+        pygame.display.update()
+
+        if demoNum == 0:
+            for num in range(4):
+                DemoSprites.DemoGoldSprite((458 + 96 * (num + num // 2), -164))
+            for num in range(14):
+                for postNum in range(2):
+                    DemoSprites.PostSprite((-196 + 96 * num, -194 + 96 * postNum))
+            DemoSprites.DemoWallSprite(0, (668 + 96 * 3, -294))
+            DemoSprites.DemoPlayerSprite(0, (180, -182))
+        elif demoNum == 1:
+            for num in range(10):
+                for postNum in range(6):
+                    DemoSprites.PostSprite((1474 - 96 * num, 246 + 96 * postNum))
+            DemoSprites.DemoArmSprite(1, (1430 - 96 * 8, 242 + 96 * 1))
+            DemoSprites.DemoPlayerSprite(1, (638, 274))
+        elif demoNum == 2:
+            for num in range(12):
+                for postNum in range(2):
+                    DemoSprites.PostSprite((734 - 96 * num, 510 + 96 * postNum))
+            DemoSprites.DemoWallSprite(2, (-452, 222))
+            DemoSprites.DemoHoleSprite((474, 540))
+            DemoSprites.DemoUrchinSprite((474 - 96 * 5, 540))
+            DemoSprites.DemoWaveSprite((174, 540))
+            DemoSprites.DemoPlayerSprite(2, (290, 522))
+            DemoSprites.DemoPlayerSprite.facingDirection = DemoSprites.Directions.LEFT
+        else:
+            for num in range(2):
+                for postNum in range(2):
+                    DemoSprites.PostSprite((-448 + 384 * num, 86 + 96 * postNum))
+                    DemoSprites.PostSprite((-352 + 384 * num, 86 + 96 * postNum))
+            for num in range(2):
+                DemoSprites.DemoRubberTrapSprite(num, (-276 + 96 * num, 86))
+            DemoSprites.DemoArmSprite(3, (-200, 90), True)
+            DemoSprites.DemoPlayerSprite(3, (-224, 112))
+        DemoSprites.DemoDisplay(demoNum, displayRects[demoNum].topleft)
+        alphaKey = 255
+
+        while frameCount < 600:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == pygame.KEYDOWN:
+                    if pygame.key.name(event.key) == controlsDicts[0]["pause"] or event.key == pygame.K_RETURN:
+                        pygame.mixer.music.stop()
+                        SCREEN.fill(BLACK)
+                        return
+            frameCount += 1
+
+            if frameCount < 105:
+                displayRects[demoNum].topleft = [displayRects[demoNum].topleft[0] + spriteCoords[demoNum][0],
+                                                 displayRects[demoNum].topleft[1] + spriteCoords[demoNum][1]]
+                if demoNum == 0:
+                    coverRects[demoNum].bottom = displayRects[demoNum].top
+                elif demoNum == 1:
+                    coverRects[demoNum].left = displayRects[demoNum].right
+                elif demoNum == 2:
+                    coverRects[demoNum].top = displayRects[demoNum].bottom
+                else:
+                    coverRects[demoNum].right = displayRects[demoNum].left
+                for sprite in DemoSprites.demoGroup:
+                    sprite.coordinates = (sprite.coordinates[0] + spriteCoords[demoNum][0],
+                                          sprite.coordinates[1] + spriteCoords[demoNum][1])
+
+            if frameCount < 330:
+                pygame.draw.rect(SCREEN, BLACK, displayRects[demoNum])
+                for sprite in DemoSprites.demoGroup:
+                    sprite.setCoordinates()
+                    sprite.update()
+                    SCREEN.blit(sprite.image, sprite.coordinates)
+                pygame.draw.rect(SCREEN, GREY, coverRects[demoNum])
+                pygame.display.update(coverRects[demoNum])
+                pygame.display.update(displayRects[demoNum])
+            elif frameCount == 330:
+                playSound("item_appears_or_collected.wav")
+                demoNameBlock = DemoSprites.DemoNameDisplay(demoNum, (nameRects[demoNum].left, nameRects[demoNum].top))
+                for sprite in DemoSprites.demoGroup:
+                    sprite.setMonochromeImage()
+            else:
+                SCREEN.fill(GREY)
+                pygame.draw.rect(SCREEN, BLACK, displayRects[demoNum])
+                for sprite in DemoSprites.demoGroup:
+                    SCREEN.blit(sprite.image, sprite.coordinates)
+                pygame.draw.rect(SCREEN, GREY, (displayRects[demoNum].right, 0,
+                                                SCREEN_SIZE[0] - displayRects[demoNum].right, SCREEN_SIZE[1]))
+                pygame.draw.rect(SCREEN, GREY, (0, 0, displayRects[demoNum].left, SCREEN_SIZE[1]))
+                pygame.draw.rect(SCREEN, GREY, (0, 0, SCREEN_SIZE[0], displayRects[demoNum].top))
+                pygame.draw.rect(SCREEN, BLACK, (nameRects[demoNum].left, nameRects[demoNum].top, 365, 65))
+                SCREEN.blit(demoNameBlock.image, demoNameBlock.coordinates)
+                SCREEN.blit(playerNames[demoNum], playerNameCoordinates[demoNum])
+                alphaKey = flashScreen(frameCount, alphaKey)
+                pygame.display.update()
+            CLOCK.tick(FPS)
+
+
+def flashScreen(frameCount, alphaKey):
+    frameCount -= 325
+    screenCovering = pygame.Surface(SCREEN_SIZE)
+    screenCovering.fill(WHITE)
+    screenCovering.set_alpha(alphaKey)
+    if 39 < frameCount:
+        alphaKey = max(0, alphaKey - 3)
+    SCREEN.blit(screenCovering, (0, 0))
+    pygame.display.update()
+    return alphaKey
 
 
 def playLevel(playerList, playerArmList, level, levelCount):
@@ -235,6 +353,7 @@ def playLevel(playerList, playerArmList, level, levelCount):
     levelComplete = alreadyLoadedLevelEnd = playingLowTimeMusic = timeReachedZero = False  # # # # # # # # # #
     gameOverTextActive = [0 for __ in range(len(playerList))]
     frameCount = 0
+    timeCount = 800
     if isinstance(level, CluLevels.BonusLevel):
         timeCount = 200
     elif levelCount in range(5, 11) or (levelCount > 21 and (levelCount - 1) % 20 in range(6, 10)):
@@ -243,8 +362,7 @@ def playLevel(playerList, playerArmList, level, levelCount):
         timeCount = 600
     elif levelCount in range(17, 21) or (levelCount > 21 and (levelCount - 1) % 20 > 16):
         timeCount = 500
-    else:
-        timeCount = 800
+    initialTimeCount = timeCount
 
     SCREEN.fill(BLACK)
     blitLevelData(playerList, level, timeCount)
@@ -302,8 +420,7 @@ def playLevel(playerList, playerArmList, level, levelCount):
                                 player.startMoving(directionChosen)
                             elif player.playerState in [CluSprites.PlayerStates.MOVING,
                                                         CluSprites.PlayerStates.SWINGING,
-                                                        CluSprites.PlayerStates.FINISHED_SWINGING,
-                                                        CluSprites.PlayerStates.FROZEN]:
+                                                        CluSprites.PlayerStates.FINISHED_SWINGING]:
                                 directionChosen = [key for key, val in controlsDicts[num].items()
                                                    if val == pygame.key.name(event.key)][0]
                                 playerArmList[num].extendArm(directionChosen)
@@ -336,21 +453,8 @@ def playLevel(playerList, playerArmList, level, levelCount):
                         group.update()
                         for sprite in group:
                             SCREEN.blit(sprite.image, sprite.coordinates)
-                # for sprite in CluSprites.armGroup:
-                #     pygame.draw.rect(SCREEN, WHITE, sprite.wallCollisionRect)
-                # for sprite in CluSprites.goldGroup:
-                #     pygame.draw.rect(SCREEN, WHITE, sprite.collisionRect)
-                # for sprite in level.levelBorderRects:
-                #      pygame.draw.rect(SCREEN, WHITE, sprite)
-                # for sprite in CluSprites.armGroup:
-                #     s = pygame.Surface((12, 12))  # the size of your rect
-                #     s.set_alpha(128)  # alpha level
-                #     s.fill(WHITE)  # this fills the entire surface
-                #     SCREEN.blit(s, (sprite.collisionRect[0], sprite.collisionRect[1]))
                     if frameCount % 5 == 0:
                         timeCount = max(0, timeCount - 1)
-                    # for group in CluSprites.allGroups:
-                    #     group.update()
                     if timeCount > 200 and playingLowTimeMusic:
                         playingLowTimeMusic = False
                         pygame.mixer.music.load(LEVEL_MUSIC)
@@ -368,7 +472,7 @@ def playLevel(playerList, playerArmList, level, levelCount):
                             playSound("death.wav")
                             pygame.mixer.music.stop()
                             for player in playerList:
-                                if not player.playerState in [CluSprites.PlayerStates.DEAD,
+                                if player.playerState not in [CluSprites.PlayerStates.DEAD,
                                                               CluSprites.PlayerStates.OFF_SCREEN,
                                                               CluSprites.PlayerStates.FALLING,
                                                               CluSprites.PlayerStates.EXPLODING]:
