@@ -1,6 +1,7 @@
 import pygame
 import os
 import random
+from CluGlobals import getImage
 
 SCREEN_SIZE = (512, 448)
 SCREEN = pygame.display.set_mode(SCREEN_SIZE)
@@ -8,23 +9,6 @@ SCREEN = pygame.display.set_mode(SCREEN_SIZE)
 BLACK = (0, 0, 0)
 gameFolder = os.path.dirname(__file__)
 backgroundFolder = os.path.join(gameFolder, "Backgrounds")
-
-_imageLibrary = {}
-
-
-def getImage(imagePath):
-    global _imageLibrary
-    image = _imageLibrary.get(imagePath)
-    if image is None:
-        fullPath = os.path.join(backgroundFolder, imagePath)
-        try:
-            image = pygame.image.load(fullPath).convert()
-            _imageLibrary[imagePath] = image
-        except pygame.error:
-            print("ERROR: Cannot find image '{}'".format(imagePath))
-            pygame.quit()
-            sys.exit()
-    return image
 
 
 class Level:
@@ -44,7 +28,6 @@ class Level:
         self.levelBorderRects = []
         self.isFlashing = False
         self.frameCount = 0
-        # 50x50 tiles
 
     def initialize(self):
         self.goldCount = len(self.goldTilesVertical) + len(self.goldTilesHorizontal)
@@ -65,11 +48,14 @@ class Level:
 class BoardOneLevel(Level):
     def __init__(self, rubberTilesHorizontal, rubberTilesVertical, goldTilesHorizontal, goldTilesVertical):
         super().__init__(rubberTilesHorizontal, rubberTilesVertical, goldTilesHorizontal, goldTilesVertical)
-        self.image = getImage("background_1A.png")
+        self.image = getImage(backgroundFolder, "background_1A.png")
         self.image.set_colorkey(BLACK)
-        self.standardImage = getImage("background_1A.png")
-        self.lightImage = getImage("background_1B.png")
-        self.playerStartPosition = [(2, 1), (10, 1), (3, 7), (9, 7)]
+        self.standardImage = getImage(backgroundFolder, "background_1A.png")
+        self.lightImage = getImage(backgroundFolder, "background_1B.png")
+        self.itemTiles = [(x, y) for x in range(1, 10) for y in range(0, 8) if (x, y) not in self.playerStartPosition
+                          and (x, y) not in self.blackHolePositions and (x, y) not in [(1, 0), (9, 0), (1, 7),
+                                                                                       (9, 7)]]
+        self.playerStartPosition = [(1, 1), (9, 1), (2, 7), (8, 7)]
         self.blackHolePositions = [(5, 4)]
         self.levelBorderRects = [pygame.Rect(0, 0, 80, 84), pygame.Rect(0, 0, 512, 36), pygame.Rect(0, 0, 39, 448),
                                  pygame.Rect(432, 0, 80, 84), pygame.Rect(477, 0, 39, 448),
@@ -80,11 +66,14 @@ class BoardOneLevel(Level):
 class BoardTwoLevel(Level):
     def __init__(self, rubberTilesHorizontal, rubberTilesVertical, goldTilesHorizontal, goldTilesVertical):
         super().__init__(rubberTilesHorizontal, rubberTilesVertical, goldTilesHorizontal, goldTilesVertical)
-        self.image = getImage("background_2A.png")
+        self.image = getImage(backgroundFolder, "background_2A.png")
         self.image.set_colorkey(BLACK)
-        self.standardImage = getImage("background_2A.png")
-        self.lightImage = getImage("background_2B.png")
-        self.playerStartPosition = [(5, 0), (7, 0), (2, 5), (10, 5)]
+        self.standardImage = getImage(backgroundFolder, "background_2A.png")
+        self.lightImage = getImage(backgroundFolder, "background_2B.png")
+        self.itemTiles = [(x, y) for x in range(1, 10) for y in range(0, 8) if (x, y) not in self.playerStartPosition
+                          and (x, y) not in self.blackHolePositions and (x, y) not in [(1, 0), (9, 0), (1, 7),
+                                                                                       (9, 7)]]
+        self.playerStartPosition = [(4, 0), (6, 0), (1, 5), (9, 5)]
         self.blackHolePositions = [(2, 6), (8, 6)]
         self.levelBorderRects = [pygame.Rect(0, 0, 80, 84), pygame.Rect(0, 0, 512, 36), pygame.Rect(0, 0, 39, 448),
                                  pygame.Rect(432, 0, 80, 84), pygame.Rect(477, 0, 39, 448),
@@ -95,11 +84,14 @@ class BoardTwoLevel(Level):
 class BoardThreeLevel(Level):
     def __init__(self, rubberTilesHorizontal, rubberTilesVertical, goldTilesHorizontal, goldTilesVertical):
         super().__init__(rubberTilesHorizontal, rubberTilesVertical, goldTilesHorizontal, goldTilesVertical)
-        self.image = getImage("background_3A.png")
+        self.image = getImage(backgroundFolder, "background_3A.png")
         self.image.set_colorkey(BLACK)
-        self.standardImage = getImage("background_3A.png")
-        self.lightImage = getImage("background_3B.png")
-        self.playerStartPosition = [(6, 1), (6, 6), (2, 3), (10, 3)]
+        self.standardImage = getImage(backgroundFolder, "background_3A.png")
+        self.lightImage = getImage(backgroundFolder, "background_3B.png")
+        self.itemTiles = [(x, y) for x in range(1, 10) for y in range(0, 8) if (x, y) not in self.playerStartPosition
+                          and (x, y) not in self.blackHolePositions and (x, y) not in [(4, 0), (5, 0), (6, 0),
+                                                                                       (4, 7), (5, 7), (6, 7)]]
+        self.playerStartPosition = [(4, 1), (4, 6), (1, 3), (9, 3)]
         self.blackHolePositions = [(4, 4), (6, 4)]
         self.levelBorderRects = [pygame.Rect(0, 0, 512, 36), pygame.Rect(0, 0, 39, 448), pygame.Rect(477, 0, 39, 448),
                                  pygame.Rect(0, 426, 512, 36), pygame.Rect(190, 0, 134, 84),
@@ -109,11 +101,17 @@ class BoardThreeLevel(Level):
 class BoardFourLevel(Level):
     def __init__(self, rubberTilesHorizontal, rubberTilesVertical, goldTilesHorizontal, goldTilesVertical):
         super().__init__(rubberTilesHorizontal, rubberTilesVertical, goldTilesHorizontal, goldTilesVertical)
-        self.image = getImage("background_4A.png")
+        self.image = getImage(backgroundFolder, "background_4A.png")
         self.image.set_colorkey(BLACK)
-        self.standardImage = getImage("background_4A.png")
-        self.lightImage = getImage("background_4B.png")
-        self.playerStartPosition = [(5, 0), (7, 0), (2, 7), (10, 7)]
+        self.standardImage = getImage(backgroundFolder, "background_4A.png")
+        self.lightImage = getImage(backgroundFolder, "background_4B.png")
+        self.itemTiles = [(x, y) for x in range(0, 11) for y in range(0, 8) if (x, y) not in self.playerStartPosition
+                          and (x, y) not in self.blackHolePositions and (x, y) not in [(5, 0), (0, 1), (5, 1), (10, 1),
+                                                                                       (0, 2), (10, 2), (0, 3),
+                                                                                       (10, 3), (0, 4), (10, 4),
+                                                                                       (0, 5), (10, 5), (0, 6), (5, 6),
+                                                                                       (10, 6), (5, 7)]]
+        self.playerStartPosition = [(4, 0), (6, 0), (1, 7), (9, 7)]
         self.blackHolePositions = [(2, 2), (8, 2), (4, 6), (6, 6)]
         self.levelBorderRects = [pygame.Rect(0, 0, 512, 36), pygame.Rect(238, 0, 36, 132),
                                  pygame.Rect(238, 346, 36, 132), pygame.Rect(0, 426, 512, 36),
@@ -123,11 +121,14 @@ class BoardFourLevel(Level):
 class BoardFiveLevel(Level):
     def __init__(self, rubberTilesHorizontal, rubberTilesVertical, goldTilesHorizontal, goldTilesVertical):
         super().__init__(rubberTilesHorizontal, rubberTilesVertical, goldTilesHorizontal, goldTilesVertical)
-        self.image = getImage("background_5A.png")
+        self.image = getImage(backgroundFolder, "background_5A.png")
         self.image.set_colorkey(BLACK)
-        self.standardImage = getImage("background_5A.png")
-        self.lightImage = getImage("background_5B.png")
-        self.playerStartPosition = [(2, 0), (10, 0), (4, 7), (6, 7)]
+        self.standardImage = getImage(backgroundFolder, "background_5A.png")
+        self.lightImage = getImage(backgroundFolder, "background_5B.png")
+        self.itemTiles = [(x, y) for x in range(0, 11) for y in range(0, 8) if (x, y) not in self.playerStartPosition
+                          and (x, y) not in self.blackHolePositions and (x, y) not in [(0, 0), (5, 0), (10, 0),
+                                                                                       (0, 7), (5, 7), (10, 7)]]
+        self.playerStartPosition = [(1, 0), (9, 0), (3, 7), (5, 7)]
         self.blackHolePositions = [(2, 4), (4, 4), (6, 4), (8, 4)]
         self.activeRubberTraps = [(1, 4), (9, 4)]
         self.levelBorderRects = [pygame.Rect(0, 0, 512, 36), pygame.Rect(238, 0, 40, 84), pygame.Rect(0, 426, 512, 36),
@@ -145,12 +146,11 @@ class BonusLevel(Level):
                              (9, 2), (2, 3), (3, 3), (8, 3), (9, 3), (2, 4), (3, 4), (8, 4), (9, 4), (2, 5), (3, 5),
                              (8, 5), (9, 5), (2, 6), (3, 6), (4, 6), (5, 6), (6, 6), (7, 6), (8, 6), (9, 6)]
         super().__init__([], [], goldTilesHorizontal, goldTilesVertical)
-        self.image = getImage("background_6A.png")
+        self.image = getImage(backgroundFolder, "background_6A.png")
         self.image.set_colorkey(BLACK)
-        self.standardImage = getImage("background_6A.png")
-        self.lightImage = getImage("background_6B.png")
+        self.standardImage = getImage(backgroundFolder, "background_6A.png")
+        self.lightImage = getImage(backgroundFolder, "background_6B.png")
         self.playerStartPosition = [(5, 1), (7, 1), (4, 6), (8, 6)]
-        # self.playerStartPosition = [(2, 4), (9, 4)]
         self.levelBorderRects = [pygame.Rect(0, 0, 512, 36), pygame.Rect(188, 186, 136, 94),
                                  pygame.Rect(0, 426, 512, 36), pygame.Rect(0, 0, 39, 448),
                                  pygame.Rect(477, 0, 39, 448)]

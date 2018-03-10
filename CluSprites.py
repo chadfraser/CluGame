@@ -1,6 +1,7 @@
 import pygame
 import os
 import random
+import math
 from enum import Enum
 from CluLevels import BonusLevel
 from CluGlobals import getImage, playSound
@@ -14,7 +15,8 @@ from CluGlobals import getImage, playSound
              Spawning items
              Level complete (Tally points, animate, sound effects, bonus)
              Game over screen
-   Bonus level differences"""
+   Bonus level differences
+   Priority of wall pushing"""
 
 """Fix pushing urchin sound effect
 Fix window icon
@@ -24,20 +26,10 @@ First frame grab, moving up holding left
 Fix low time music"""
 
 """Finish player end screen animation"""
-"""Adjusting player coordinates"""
 
-"""apple banana  cherry  melon   pineapple
-bag      clock   flag
-pts800   pts1500
-count_points    earn_bonus
-
+"""count_points    earn_bonus
 Text sprite"""
 
-"""Collect clock: Change color of ..."""
-
-
-# SCREEN_SIZE = (512, 448)
-# SCREEN = pygame.display.set_mode(SCREEN_SIZE)
 
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
@@ -82,7 +74,6 @@ class PlayerStates(Enum):
     FALLING = "falling"
     EXPLODING = "exploding"
     OFF_SCREEN = "off screen"
-    FROZEN = "frozen"
     LEVEL_END = "level end"
     DEAD = "dead"
 
@@ -100,7 +91,6 @@ class EnemyState(Enum):
     WAITING = "waiting"
     EXPLODING = "exploding"
     OFF_SCREEN = "off screen"
-    FROZEN = "frozen"
     DEAD = "dead"
 
 
@@ -124,6 +114,8 @@ class Directions(Enum):
     COUNTER = "counter-clockwise"
 
 
+directionsDict = {"up": Directions.UP, "down": Directions.DOWN, "left": Directions.LEFT, "right": Directions.RIGHT}
+
 playerGroup = pygame.sprite.Group()
 armGroup = pygame.sprite.Group()
 attackGroup = pygame.sprite.Group()
@@ -135,8 +127,6 @@ rubberGroup = pygame.sprite.Group()
 textGroup = pygame.sprite.Group()
 allGroups = (itemGroup, blackHoleGroup, enemyGroup, goldGroup, rubberGroup, armGroup, playerGroup, attackGroup,
              textGroup)
-
-directionsDict = {"up": Directions.UP, "down": Directions.DOWN, "left": Directions.LEFT, "right": Directions.RIGHT}
 
 
 class TitleSprite(pygame.sprite.Sprite):
@@ -221,7 +211,8 @@ class PlayerSprite(pygame.sprite.Sprite):
     directionList = [Directions.RIGHT, Directions.UP, Directions.LEFT, Directions.DOWN]
     keyFrames = [6, 17, 27, 38, 49, 59, 70, 81]
     currentLevel = None
-    movementSpeed = 2
+    movementSpeed = 2.12
+    rotationSpeed = 4.24
 
     def __init__(self, playerNumber=1):
         super().__init__(playerGroup)
@@ -233,11 +224,11 @@ class PlayerSprite(pygame.sprite.Sprite):
         self.playerState = OtherState.OFF_SCREEN
         self.facingDirection = Directions.RIGHT
         self.swingingDirections = [Directions.RIGHT, Directions.CLOCKWISE]
-        self.bouncingOff = False
+        self.bouncingOffWall = self.bouncingOffPlayer = self.isFrozen = False
         self.killedUrchinCount = self.goldCollectedCount = self.score = 0
-        self.swingFrameCount = self.frameCount = 0
+        self.frameCount = self.swingFrameCount = 0
 
-        self.imageDict = {"arm": [], "ball": [], "end": [], "death": [], "turn": [], "fall": [],
+        self.imageDict = {"arm": [], "ball": [], "end": [], "death": [], "turn": [], "fall": [],  # #######
                           "move": {}, "squish": {}}
         armImageList = spriteSheet.getStripImages(152, 0, 16, 16, 2)
         armImageList.append(spriteSheet.getSheetImage(184, 0, 14, 14))
@@ -256,7 +247,7 @@ class PlayerSprite(pygame.sprite.Sprite):
         self.image = self.emptyImage
         self.image.set_colorkey(BLACK)
         self.rect = self.image.get_rect()
-        self.collisionRect = pygame.rect.Rect((0, 0), (12, 12))
+        self.collisionRect = pygame.rect.Rect((0, 0), (16, 16))
 
     def flipImage(self):
         if self.playerState not in [PlayerStates.SWINGING, PlayerStates.HITTING_PLAYER_SWINGING] or\
@@ -293,11 +284,13 @@ class PlayerSprite(pygame.sprite.Sprite):
     def setCoordinates(self, x, y):
         self.coordinates = x, y
         self.rect.topleft = x, y
-        self.collisionRect = pygame.rect.Rect((x + 12, y + 12), (12, 12))
+        self.collisionRect = pygame.rect.Rect((x + 8, y + 8), (16, 16))
 
     def initialize(self, x, y):
         self.baseCoordinates = (x, y)
         self.setCoordinates(x, y)
+        self.facingDirection = Directions.RIGHT
+        self.bouncingOffWall = self.bouncingOffPlayer = self.isFrozen = False
         self.killedUrchinCount = self.goldCollectedCount = 0
         if not self.playerState == PlayerStates.DEAD:
             self.putSpriteInBall()
@@ -317,44 +310,50 @@ class PlayerSprite(pygame.sprite.Sprite):
         else:
             return "vertical"
 
-    def putSpriteInBall(self):
-        self.facingDirection = Directions.RIGHT
-        self.playerState = PlayerStates.BALL
-        self.changeImage("ball", 0)
-        self.lives = max(0, self.lives - 1)
-        self.frameCount = 0
-
     def update(self):
         self.checkEnemyCollision()
         self.checkBlackHoleCollision()
+        self.checkWallCollision()
         self.checkOtherPlayerCollision()
         self.frameCount += 1
 
         if self.playerState == PlayerStates.BALL:
-            if self.frameCount % 16 < 8:
+            if self.frameCount % 16 < 8 and not self.isFrozen:
                 self.changeImage("ball", 0)
             else:
                 self.changeImage("ball", 1)
-            if self.frameCount % 16 == 0:
-                self.frameCount = 0
         elif self.playerState == PlayerStates.MOVING:
             self.moveSprite()
-            self.moveAnimation()
-            if self.frameCount % 8 == 0:
-                self.frameCount = 0
+            self.animateMovement()
         elif self.playerState == PlayerStates.FINISHED_SWINGING:
             self.moveSprite()
-            self.moveAnimation()
-            if self.frameCount % 16 == 0:
-                self.playerState = PlayerStates.MOVING
-        elif self.playerState == PlayerStates.HITTING_WALL:
-            if self.frameCount % 9 == 4:
-                self.changeImage("squish", 1)
-            elif self.frameCount % 9 > 4:
-                self.changeImage("squish", 2)
-            if self.frameCount % 9 == 0:
+            self.animateMovement()
+            if self.frameCount % 16 == 0 and not self.isFrozen:
                 self.frameCount = 0
+                self.playerState = PlayerStates.MOVING
+        elif self.playerState == PlayerStates.SWINGING:
+            if not self.isFrozen:
+                self.swingFrameCount += 1
+                self.swingFrameCount %= 85
+                self.swing()
+        elif self.playerState == PlayerStates.HITTING_PLAYER_MOVING or\
+                self.playerState == PlayerStates.HITTING_PLAYER_SWINGING:
+            self.bounceOffOfPlayer()
+        elif self.playerState == PlayerStates.HITTING_WALL:
+            if self.frameCount == 4:
+                self.changeImage("squish", 1)
+            elif 4 < self.frameCount < 9:
+                self.changeImage("squish", 2)
+            elif self.frameCount == 9 and not self.isFrozen:
                 self.rebound()
+            elif 9 < self.frameCount:
+                self.moveSprite()
+                self.animateMovement()
+                if not self.isFrozen and not any(self.rect.colliderect(levelRect) for levelRect in
+                                                 PlayerSprite.currentLevel.levelBorderRects):
+                    self.frameCount = 0
+                    self.playerState = PlayerStates.MOVING
+                    self.bouncingOffWall = False
         elif self.playerState in [PlayerStates.FALLING, PlayerStates.EXPLODING]:
             imageKey = "death"
             if self.playerState == PlayerStates.FALLING:
@@ -362,9 +361,9 @@ class PlayerSprite(pygame.sprite.Sprite):
             if 7 < self.frameCount % 40 < 33:
                 self.changeImage(imageKey, (self.frameCount - 7) // 8)
             if self.frameCount % 40 == 0:
+                self.frameCount = 0
                 self.playerState = PlayerStates.OFF_SCREEN
                 self.image = self.emptyImage
-                self.frameCount = 0
         elif self.playerState == PlayerStates.OFF_SCREEN:
             if self.lives > 0 and self.frameCount % 160 == 0:
                 self.setCoordinates(self.baseCoordinates[0], self.baseCoordinates[1])
@@ -372,46 +371,33 @@ class PlayerSprite(pygame.sprite.Sprite):
                 self.frameCount = 0
             elif self.lives == 0:
                 self.playerState = PlayerStates.DEAD
-        elif self.playerState == PlayerStates.SWINGING:
-            self.swingFrameCount += 1
-            self.swingFrameCount %= 85
-            self.swing()
-        elif self.playerState == PlayerStates.HITTING_PLAYER_MOVING:
-            if self.frameCount % 8 < 4:
-                self.changeImage("move", 2)
-            else:
-                self.changeImage("move", 3)
-            if self.frameCount % 8 == 0:
-                self.rebound()
-                self.frameCount = 0
-        elif self.playerState == PlayerStates.HITTING_PLAYER_SWINGING:
-            if self.getOrthogonalTurnState():
-                imageKey = "move"
-            else:
-                imageKey = "turn"
-            if self.frameCount % 8 < 4:
-                self.changeImage(imageKey, 2)
-            else:
-                self.changeImage(imageKey, 3)
-            if self.frameCount % 8 == 0:
-                self.adjustPosition()
-                self.rebound()
-                self.frameCount = 0
-                self.playerState = PlayerStates.MOVING
         elif self.playerState == PlayerStates.LEVEL_END:
             self.animateLevelEnd()
 
-        if self.bouncingOff:
+        if self.bouncingOffPlayer:
             otherPlayers = [player for player in playerGroup if (player != self and
                             player.playerState in [PlayerStates.MOVING, PlayerStates.SWINGING,
                                                    PlayerStates.HITTING_PLAYER_MOVING,
                                                    PlayerStates.HITTING_PLAYER_SWINGING,
-                                                   PlayerStates.FINISHED_SWINGING,
-                                                   PlayerStates.FROZEN])]
+                                                   PlayerStates.FINISHED_SWINGING])]
             if not any(player.collisionRect.colliderect(self.collisionRect) for player in otherPlayers):
-                self.bouncingOff = False
+                self.bouncingOffPlayer = False
+        if self.bouncingOffWall:
+            if not any(self.rect.colliderect(levelRect) for levelRect in PlayerSprite.currentLevel.levelBorderRects):
+                self.bouncingOffWall = False
+        if self.frameCount % 240 == 0:
+            self.frameCount = 0
         self.flipImage()
         self.image.set_colorkey(BLACK)
+
+    def putSpriteInBall(self):
+        self.facingDirection = Directions.RIGHT
+        self.playerState = PlayerStates.BALL
+        self.changeImage("ball", 0)
+        if self.isFrozen:
+            self.changeImage("ball", 1)
+        self.lives = max(0, self.lives - 1)
+        self.frameCount = 0
 
     def startMoving(self, direction):
         if self.playerState == PlayerStates.BALL:
@@ -419,32 +405,42 @@ class PlayerSprite(pygame.sprite.Sprite):
             self.facingDirection = directionsDict[direction]
             self.setCoordinates(self.coordinates[0], self.coordinates[1] - 1)
             self.changeImage("move", 0)
+            if self.isFrozen:
+                self.changeImage("move", 2)
             self.playerState = PlayerStates.MOVING
             self.frameCount = 0
 
     def moveSprite(self):
-        if self.facingDirection == Directions.UP:
-            self.setCoordinates(self.coordinates[0], self.coordinates[1] - PlayerSprite.movementSpeed)
-        elif self.facingDirection == Directions.DOWN:
-            self.setCoordinates(self.coordinates[0], self.coordinates[1] + PlayerSprite.movementSpeed)
-        elif self.facingDirection == Directions.LEFT:
-            self.setCoordinates(self.coordinates[0] - PlayerSprite.movementSpeed, self.coordinates[1])
-            if self.rect.right < 0:
-                self.setCoordinates(512, self.coordinates[1])
-        elif self.facingDirection == Directions.RIGHT:
-            self.setCoordinates(self.coordinates[0] + PlayerSprite.movementSpeed, self.coordinates[1])
-            if self.rect.left > 512:
-                self.setCoordinates(-48, self.coordinates[1])
-        if any(self.rect.colliderect(levelRect) for levelRect in PlayerSprite.currentLevel.levelBorderRects):
-            self.hitWall()
-            self.bouncingOff = True
-        for gold in goldGroup:
-            if gold.collisionRect.collidepoint(self.rect.center) and gold.goldState in\
-                    [OtherState.OFF_SCREEN, OtherState.REVEALED, OtherState.UPSIDE_DOWN]:
-                gold.passingDirection = self.facingDirection
-                if not gold.alreadyRevealed:
-                    self.goldCollectedCount += 1
-                gold.startFlipAnimation()
+        if not self.isFrozen:
+            if self.facingDirection == Directions.UP:
+                self.setCoordinates(self.coordinates[0], self.coordinates[1] - PlayerSprite.movementSpeed)
+            elif self.facingDirection == Directions.DOWN:
+                self.setCoordinates(self.coordinates[0], self.coordinates[1] + PlayerSprite.movementSpeed)
+            elif self.facingDirection == Directions.LEFT:
+                self.setCoordinates(self.coordinates[0] - PlayerSprite.movementSpeed, self.coordinates[1])
+                if self.rect.right < 0:
+                    self.setCoordinates(512, self.coordinates[1])
+            elif self.facingDirection == Directions.RIGHT:
+                self.setCoordinates(self.coordinates[0] + PlayerSprite.movementSpeed, self.coordinates[1])
+                if self.rect.left > 512:
+                    self.setCoordinates(-48, self.coordinates[1])
+            for gold in goldGroup:
+                if gold.collisionRect.collidepoint(self.rect.center) and gold.goldState in\
+                        [OtherState.OFF_SCREEN, OtherState.REVEALED, OtherState.UPSIDE_DOWN]:
+                    gold.passingDirection = self.facingDirection
+                    if not gold.alreadyRevealed:
+                        self.goldCollectedCount += 1
+                    gold.startFlipAnimation()
+
+    def animateMovement(self):
+        if self.frameCount % 8 < 4:
+            self.changeImage("move", 1)
+            if self.isFrozen:
+                self.changeImage("move", 3)
+        else:
+            self.changeImage("move", 0)
+            if self.isFrozen:
+                self.changeImage("move", 2)
 
     def hitWall(self):
         self.frameCount = 0
@@ -455,7 +451,45 @@ class PlayerSprite(pygame.sprite.Sprite):
     def rebound(self):
         self.changeDirection()
         self.image = self.imageDict["move"][self.getDirectionKey()][0]
-        self.playerState = PlayerStates.MOVING
+        if self.isFrozen:
+            self.image = self.imageDict["move"][self.getDirectionKey()][2]
+
+    def bounceOffOfPlayer(self):
+        imageKey = "move"
+        if self.playerState == PlayerStates.HITTING_PLAYER_SWINGING and not self.getOrthogonalTurnState():
+            imageKey = "turn"
+        if any(self.rect.colliderect(levelRect) for levelRect in PlayerSprite.currentLevel.levelBorderRects):
+            self.frameCount = 0
+            self.playerState = PlayerStates.HITTING_WALL
+            self.bouncingOffWall = True
+        else:
+            if self.frameCount == 12:
+                if self.playerState == PlayerStates.HITTING_PLAYER_SWINGING:
+                    self.adjustPosition()
+                self.rebound()
+            elif self.frameCount % 16 < 6:
+                self.changeImage(imageKey, 2)
+            elif self.frameCount % 16 < 12:
+                self.changeImage(imageKey, 3)
+            else:
+                self.moveSprite()
+                self.animateMovement()
+            if self.frameCount % 16 == 0 and not self.isFrozen:
+                self.frameCount = 0
+                self.moveSprite()
+                self.animateMovement()
+                self.playerState = PlayerStates.MOVING
+                self.bouncingOffPlayer = False
+
+    def changeDirection(self):
+        if self.facingDirection == Directions.UP:
+            self.facingDirection = Directions.DOWN
+        elif self.facingDirection == Directions.DOWN:
+            self.facingDirection = Directions.UP
+        elif self.facingDirection == Directions.LEFT:
+            self.facingDirection = Directions.RIGHT
+        else:
+            self.facingDirection = Directions.LEFT
 
     def changeSwingDirection(self):
         if self.swingingDirections[0] == Directions.UP:
@@ -467,33 +501,13 @@ class PlayerSprite(pygame.sprite.Sprite):
         elif self.swingingDirections[0] == Directions.RIGHT:
             self.swingingDirections[0] = Directions.LEFT
         if self.getOrthogonalTurnState():
-            self.moveAnimation()
+            self.animateMovement()
         elif self.frameCount % 8 < 4:
             self.image = self.imageDict["turn"][0]
             self.rotateImage()
         else:
             self.image = self.imageDict["turn"][1]
-        self.image = self.imageDict["move"][self.getDirectionKey()][0]
-
-    def changeDirection(self):
-        if self.facingDirection == Directions.UP:
-            self.facingDirection = Directions.DOWN
-            self.setCoordinates(self.coordinates[0], self.coordinates[1] + (PlayerSprite.movementSpeed + 2))
-        elif self.facingDirection == Directions.DOWN:
-            self.facingDirection = Directions.UP
-            self.setCoordinates(self.coordinates[0], self.coordinates[1] - (PlayerSprite.movementSpeed + 2))
-        elif self.facingDirection == Directions.LEFT:
-            self.facingDirection = Directions.RIGHT
-            self.setCoordinates(self.coordinates[0] + (PlayerSprite.movementSpeed + 2), self.coordinates[1])
-        elif self.facingDirection == Directions.RIGHT:
-            self.facingDirection = Directions.LEFT
-            self.setCoordinates(self.coordinates[0] - (PlayerSprite.movementSpeed + 2), self.coordinates[1])
-
-    def moveAnimation(self):
-        if self.frameCount % 8 < 4:
-            self.changeImage("move", 1)
-        else:
-            self.changeImage("move", 0)
+        # self.image = self.imageDict["move"][self.getDirectionKey()][0]
 
     def getOrthogonalTurnState(self):
         if self.swingFrameCount % 85 < self.keyFrames[0] or self.keyFrames[7] <= self.swingFrameCount % 85 or\
@@ -509,7 +523,7 @@ class PlayerSprite(pygame.sprite.Sprite):
             else:
                 self.facingDirection = self.directionList[(currentDirectionIndex + 1) % 4]
         if self.getOrthogonalTurnState():
-            self.moveAnimation()
+            self.animateMovement()
         elif self.frameCount % 8 < 4:
             self.image = self.imageDict["turn"][0]
             self.rotateImage()
@@ -529,10 +543,6 @@ class PlayerSprite(pygame.sprite.Sprite):
                 if not gold.alreadyRevealed:
                     self.goldCollectedCount += 1
                 gold.startFlipAnimation()
-        print(self.swingFrameCount)
-        # if 60 < self.swingFrameCount:
-        #     pygame.time.delay(500)
-        # pygame.time.delay(500)
 
     def moveSwingSprite(self):
         moveValueA = moveValueB = 0
@@ -587,18 +597,6 @@ class PlayerSprite(pygame.sprite.Sprite):
             self.coordinates = (self.coordinates[0] + horizontalOffsets[currentFrameCountIndex],
                                 self.coordinates[1] + verticalOffsets[currentFrameCountIndex])
 
-    def checkBlackHoleCollision(self):
-        if self.playerState == PlayerStates.MOVING:
-            for hole in blackHoleGroup:
-                if hole.rect.collidepoint(self.rect.center):
-                    self.coordinates = hole.coordinates
-                    self.rect.topleft = hole.coordinates
-                    playSound("death.wav")
-                    self.frameCount = 0
-                    self.facingDirection = Directions.RIGHT
-                    self.playerState = PlayerStates.FALLING
-                    self.image = self.imageDict["fall"][0]
-
     def checkEnemyCollision(self):
         if self.playerState in [PlayerStates.MOVING, PlayerStates.SWINGING, PlayerStates.FINISHED_SWINGING,
                                 PlayerStates.HITTING_WALL, PlayerStates.HITTING_PLAYER_MOVING,
@@ -616,21 +614,40 @@ class PlayerSprite(pygame.sprite.Sprite):
                 for enemy in pushedEnemies:
                     enemy.push(self)
 
+    def checkBlackHoleCollision(self):
+        if self.playerState == PlayerStates.MOVING:
+            for hole in blackHoleGroup:
+                if hole.rect.collidepoint(self.rect.center):
+                    self.coordinates = hole.coordinates
+                    self.rect.topleft = hole.coordinates
+                    playSound("death.wav")
+                    self.frameCount = 0
+                    self.facingDirection = Directions.RIGHT
+                    self.playerState = PlayerStates.FALLING
+                    self.image = self.imageDict["fall"][0]
+
+    def checkWallCollision(self):
+        if self.playerState in [PlayerStates.MOVING, PlayerStates.FINISHED_SWINGING,
+                                PlayerStates.HITTING_PLAYER_MOVING, PlayerStates.HITTING_PLAYER_SWINGING] and not\
+                self.bouncingOffWall:
+            if any(self.rect.colliderect(levelRect) for levelRect in PlayerSprite.currentLevel.levelBorderRects):
+                self.hitWall()
+                self.bouncingOffWall = True
+
     def checkOtherPlayerCollision(self):
-        if self.playerState in [PlayerStates.MOVING, PlayerStates.SWINGING, PlayerStates.FINISHED_SWINGING,
-                                PlayerStates.FROZEN] and not self.bouncingOff:
+        if self.playerState in [PlayerStates.MOVING, PlayerStates.SWINGING, PlayerStates.FINISHED_SWINGING] and not\
+                self.bouncingOffWall and not self.bouncingOffPlayer:
             otherPlayers = [player for player in playerGroup if (player != self and
                             player.playerState in [PlayerStates.MOVING, PlayerStates.SWINGING,
-                                                   PlayerStates.FINISHED_SWINGING, PlayerStates.FROZEN,
-                                                   PlayerStates.HITTING_PLAYER_MOVING,
+                                                   PlayerStates.FINISHED_SWINGING, PlayerStates.HITTING_PLAYER_MOVING,
                                                    PlayerStates.HITTING_PLAYER_SWINGING])]
             for player in otherPlayers:
                 if player.collisionRect.colliderect(self.collisionRect):
                     playSound("bounce_rubber_or_player.wav")
                     self.frameCount = 0
+                    self.bouncingOffPlayer = True
                     if self.playerState in [PlayerStates.MOVING, PlayerStates.FINISHED_SWINGING]:
                         self.playerState = PlayerStates.HITTING_PLAYER_MOVING
-                        self.bouncingOff = True
                         self.image = self.imageDict["move"][self.getDirectionKey()][2]
                     else:
                         self.playerState = PlayerStates.HITTING_PLAYER_SWINGING
@@ -651,9 +668,6 @@ class PlayerSprite(pygame.sprite.Sprite):
                             self.rotateImage()
                         self.swingFrameCount %= 85
                         self.changeSwingDirection()
-                    # if player.playerState not in [PlayerStates.HITTING_PLAYER_MOVING,
-                    #                               PlayerStates.HITTING_PLAYER_SWINGING]:
-                    #     player.checkOtherPlayerCollision()
 
     def adjustPosition(self):
         if self.isFacingHorizontally():
@@ -684,7 +698,7 @@ class PlayerSprite(pygame.sprite.Sprite):
 class PlayerArmSprite(pygame.sprite.Sprite):
     directionList = [Directions.RIGHT, Directions.UP, Directions.LEFT, Directions.DOWN]
 
-    def __init__(self, playerBody=None):
+    def __init__(self, playerBody):
         super().__init__(armGroup)
         self.playerBody = playerBody
         self.coordinates = (0, 0)
@@ -768,7 +782,7 @@ class PlayerArmSprite(pygame.sprite.Sprite):
             self.setCoordinates(self.playerBody.coordinates[0], self.playerBody.coordinates[1])
             self.checkGrabPost()
             self.image = self.playerBody.imageDict["arm"][0]
-        elif self.armState == ArmStates.SWINGING:
+        elif self.armState == ArmStates.SWINGING and not self.playerBody.isFrozen:
             self.swingFrameCount += 1
             self.swingFrameCount %= 85
             self.swing()
@@ -791,7 +805,8 @@ class PlayerArmSprite(pygame.sprite.Sprite):
                    PlayerSprite.currentLevel.levelBorderRects) and not\
                 any(self.wallCollisionRect.colliderect(trap.collisionRect) for trap in rubberGroup if
                     trap.trapState in [OtherState.REVEALED, OtherState.TRIGGERED]) and not\
-                any(self.playerBody.rect.colliderect(trap.collisionRect) for trap in rubberGroup):
+                any(self.playerBody.rect.colliderect(trap.collisionRect) for trap in rubberGroup) and not\
+                self.playerBody.isFrozen:
             if self.collisionRect[0] % 48 in range(34, 39) and self.collisionRect[1] % 48 in range(34, 39) and\
                                     70 < self.collisionRect[0] < 420 and 20 < self.collisionRect[1] < 500:
                 playSound("grab_post_move_end.wav")
@@ -962,18 +977,18 @@ class SonicWaveSprite(pygame.sprite.Sprite):
 
 
 class BlackHoleSprite(pygame.sprite.Sprite):
-    maxEnemies, initialEnemies = 2, 0
+    maxEnemies = 2
+    initialEnemies = 0
     blackHoleToSpawnList = []
     blackHoleToSpawn = None
-    spawnedInitialEnemies = False
-    onCooldown = False
+    spawnedInitialEnemies = onCooldown = isFrozen = False
 
     def __init__(self):
         super().__init__(blackHoleGroup)
         spriteSheet = SpriteSheet("hole.png")
         self.animationFrames = []
         self.coordinates = (0, 0)
-        self.animationCount = self.frameCount = 0
+        self.frameCount = self.animationCount = 0
 
         self.animationFrames.extend(spriteSheet.getStripImages(0, 0, 34, 34))
         self.image = self.animationFrames[0]
@@ -983,7 +998,8 @@ class BlackHoleSprite(pygame.sprite.Sprite):
     def initialize(self, x, y):
         self.setCoordinates(x, y)
         BlackHoleSprite.blackHoleToSpawnList.append(self)
-        BlackHoleSprite.spawnedInitialEnemies = False
+        BlackHoleSprite.initialEnemies = 0
+        BlackHoleSprite.spawnedInitialEnemies = BlackHoleSprite.onCooldown = BlackHoleSprite.isFrozen = False
         if BlackHoleSprite.blackHoleToSpawn is None:
             BlackHoleSprite.blackHoleToSpawn = BlackHoleSprite.blackHoleToSpawnList[0]
 
@@ -993,19 +1009,21 @@ class BlackHoleSprite(pygame.sprite.Sprite):
 
     def update(self):
         self.frameCount += 1
-        if len(enemyGroup) < BlackHoleSprite.maxEnemies and not BlackHoleSprite.onCooldown and\
-                        BlackHoleSprite.blackHoleToSpawn == self:
-            self.spawnEnemy()
-        if BlackHoleSprite.onCooldown and self.frameCount % 216 == 0 and BlackHoleSprite.blackHoleToSpawn == self:
-            BlackHoleSprite.onCooldown = False
-            BlackHoleSprite.chooseNextBlackHoleToSpawn()
-            self.frameCount = 0
         if self.frameCount % 6 == 0:
             self.animationCount += 1
             if self.animationCount >= len(self.animationFrames):
                 self.animationCount = 0
             self.image = self.animationFrames[self.animationCount]
-        if self.frameCount % 450 == 0:
+        if len(enemyGroup) < BlackHoleSprite.maxEnemies and BlackHoleSprite.blackHoleToSpawn == self and not\
+                BlackHoleSprite.onCooldown:
+            self.spawnEnemy()
+        elif BlackHoleSprite.onCooldown and self.frameCount % 216 == 0 and BlackHoleSprite.blackHoleToSpawn == self:
+            BlackHoleSprite.onCooldown = False
+            BlackHoleSprite.chooseNextBlackHoleToSpawn()
+            self.frameCount = 0
+        if self.frameCount % 216 == 0 and len(enemyGroup) == BlackHoleSprite.maxEnemies:
+            self.frameCount = 0
+        elif self.frameCount % 5400 == 0:
             self.frameCount = 0
         self.image.set_colorkey(BLACK)
 
@@ -1015,11 +1033,12 @@ class BlackHoleSprite(pygame.sprite.Sprite):
             newUrchin = UrchinSprite()
             newUrchin.setCoordinates(self.coordinates[0], self.coordinates[1])
             newUrchin.setRandomDirection()
-            self.frameCount = 1
+            newUrchin.isFrozen = self.isFrozen
+            self.frameCount = 0
             BlackHoleSprite.onCooldown = True
             if not BlackHoleSprite.spawnedInitialEnemies:
                 BlackHoleSprite.initialEnemies += 1
-            if BlackHoleSprite.initialEnemies == BlackHoleSprite.maxEnemies:
+            elif BlackHoleSprite.initialEnemies == BlackHoleSprite.maxEnemies:
                 BlackHoleSprite.spawnedInitialEnemies = True
 
     @classmethod
@@ -1041,7 +1060,7 @@ class UrchinSprite(pygame.sprite.Sprite):
         self.enemyState = EnemyState.SMALL_BALL
         self.color = BLUE
         self.facingDirection = Directions.RIGHT
-        self.bouncingOff = self.running = False
+        self.bouncingOff = self.isFrozen = self.running = False
         self.animationCount = self.frameCount = self.delayCount = 0
 
         self.imageDict = {BLUE: {}, YELLOW: {}}
@@ -1128,8 +1147,8 @@ class UrchinSprite(pygame.sprite.Sprite):
                 if self.rect.center[0] % 48 == 16 and self.rect.center[1] % 48 == 18:
                     self.running = False
                     self.getRandomMoveAction()
-                self.moveAnimation()
-                if self.frameCount % 2 == 0:
+                self.animateMovement()
+                if self.frameCount % 2 == 0 and not self.isFrozen:
                     self.moveSprite()
                 if self.frameCount % 80 == 0:
                     self.frameCount = 0
@@ -1138,8 +1157,9 @@ class UrchinSprite(pygame.sprite.Sprite):
                 self.enemyState = EnemyState.BALL
                 self.animationCount = 8
         elif self.enemyState == EnemyState.WAITING:
-            self.moveAnimation()
-            self.moveSprite()
+            self.animateMovement()
+            if not self.isFrozen:
+                self.moveSprite()
         elif self.enemyState == EnemyState.EXPLODING:
             if self.frameCount % 30 > 24:
                 self.image = self.emptyImage
@@ -1151,7 +1171,7 @@ class UrchinSprite(pygame.sprite.Sprite):
                     key = "death"
                     if self.frameCount % 30 == 0:
                         self.enemyState = EnemyState.OFF_SCREEN
-                        self.offsetPointsCoordinates(self.facingDirection)
+                        self.offsetPointsSpriteCoordinates(self.facingDirection)
                         self.facingDirection = Directions.RIGHT
                         index = 3
                         self.frameCount = 0
@@ -1161,7 +1181,6 @@ class UrchinSprite(pygame.sprite.Sprite):
         elif self.enemyState == EnemyState.OFF_SCREEN:
             if self.frameCount % 32 == 0:
                 self.enemyState = EnemyState.DEAD
-                BlackHoleSprite.blackHoleToSpawn.frameCount = 0
                 self.kill()
         self.flipImage()
         self.image.set_colorkey(BLACK)
@@ -1172,7 +1191,7 @@ class UrchinSprite(pygame.sprite.Sprite):
             self.frameCount = 0
             self.delayCount = random.randint(0, 5)
             self.enemyState = EnemyState.WAITING
-        elif randomValue < 10:
+        elif randomValue < 10 and not self.isFrozen:
             self.setRandomDirection()
         elif randomValue > 38:
             self.running = True
@@ -1218,7 +1237,7 @@ class UrchinSprite(pygame.sprite.Sprite):
                             if rubberTrap.trapState != OtherState.OFF_SCREEN):
                 self.bouncingOff = False
 
-    def moveAnimation(self):
+    def animateMovement(self):
         if self.frameCount % 16 < 9:
             self.changeImage("move", 1)
         else:
@@ -1291,7 +1310,7 @@ class UrchinSprite(pygame.sprite.Sprite):
                 print(self.rect, pushingPlayer.rect)
             self.moveSprite(PlayerSprite.movementSpeed)
 
-    def offsetPointsCoordinates(self, offsetDirection):
+    def offsetPointsSpriteCoordinates(self, offsetDirection):
         if offsetDirection == Directions.UP:
             self.setCoordinates(self.coordinates[0] - 2, self.coordinates[1] + 20)
         elif offsetDirection == Directions.DOWN:
@@ -1592,31 +1611,36 @@ class Item(pygame.sprite.Sprite):
         self.image = self.baseImage = self.imageDict["empty"]
         self.rect = self.image.get_rect()
         self.collisionRect = pygame.rect.Rect((0, 0), (18, 28))
+        self.triggerRect = pygame.rect.Rect((0, 0), (18, 28))
 
     def setCoordinates(self, x, y):
         self.coordinates = x, y
         self.rect.topleft = x, y
         self.collisionRect.topleft = x + 8, y + 4
 
-    def initialize(self, x, y):
-        self.setCoordinates(x, y)
+    def initialize(self, x, y, triggerX, triggerY):
+        self.setCoordinates(-1 + 48 * x, 49 + 48 * y)
+        self.triggerRect.topleft = (-1 + 48 * triggerX, 49 + 48 * triggerY)
         self.itemState = OtherState.OFF_SCREEN
 
     def update(self):
+        self.checkPlayerCollision()
         if self.itemState == OtherState.COLLECTED:
             self.collectItem()
         elif self.itemState == OtherState.REVEALED:
             self.image = self.baseImage
-            self.checkPlayerCollision()
         else:
             self.image = self.imageDict["empty"]
         self.image.set_colorkey(BLACK)
 
     def checkPlayerCollision(self):
         for player in playerGroup:
-            if self.rect.collidepoint(player.rect.center) and self.itemState == OtherState.REVEALED:
+            if self.rect.colliderect(player.collisionRect) and self.itemState == OtherState.REVEALED:
                 self.collectingPlayer = player
                 self.itemState = OtherState.COLLECTED
+            elif self.triggerRect.colliderect(player.collisionRect) and self.itemState == OtherState.OFF_SCREEN:
+                playSound("item_appears_or_collected.wav")
+                self.itemState = OtherState.REVEALED
 
     def collectItem(self):
         pass
@@ -1672,18 +1696,32 @@ class ItemClock(Item):
     def collectItem(self):
         self.frameCount += 1
         if self.frameCount == 1:
+            PlayerSprite.currentLevel.image = PlayerSprite.currentLevel.lightImage
             for sprite in enemyGroup:
-                sprite.enemyState = EnemyState.FROZEN
+                sprite.isFrozen = True
+            for sprite in blackHoleGroup:
+                sprite.isFrozen = True
             for sprite in playerGroup:
                 if sprite is not self.collectingPlayer:
-                    sprite.playerState = PlayerStates.FROZEN
-        if self.frameCount % 24 < 12:
+                    sprite.isFrozen = True
+        if self.frameCount < 12:
             self.image = self.imageDict["explosion 1"]
-        else:
+        elif 12 < self.frameCount < 24:
             self.image = self.imageDict["explosion 2"]
         if self.frameCount == 24:
             playSound("item_appears_or_collected.wav")
             self.image = self.imageDict["empty"]
+        if self.frameCount == 513:
+            PlayerSprite.currentLevel.image = PlayerSprite.currentLevel.standardImage
+            for sprite in enemyGroup:
+                sprite.isFrozen = False
+            for sprite in blackHoleGroup:
+                sprite.isFrozen = False
+            for sprite in playerGroup:
+                if sprite is not self.collectingPlayer:
+                    sprite.isFrozen = False
+                    if sprite.playerState == PlayerStates.FINISHED_SWINGING:
+                        sprite.frameCount = 0
             self.itemState = OtherState.DEAD
 
 
@@ -1717,6 +1755,7 @@ class ItemGlasses(Item):
             for sprite in itemGroup:
                 if sprite.itemState == OtherState.OFF_SCREEN:
                     sprite.itemState = OtherState.REVEALED
+
             for sprite in goldGroup:
                 if sprite.goldState == OtherState.OFF_SCREEN:
                     sprite.goldState = OtherState.UPSIDE_DOWN
@@ -1741,3 +1780,22 @@ BAG_ITEM = ItemBag()
 CLOCK_ITEM = ItemClock()
 FLAG_ITEM = ItemFlag()
 GLASSES_ITEM = ItemGlasses()
+minorItems = [APPLE_ITEM, BANANA_ITEM, CHERRY_ITEM, EGGPLANT_ITEM, MELON_ITEM, PINEAPPLE_ITEM, STRAWBERRY_ITEM]
+majorItems = [BAG_ITEM, CLOCK_ITEM, FLAG_ITEM, GLASSES_ITEM]
+
+
+def initializeLevelItems(level):
+    numberOfMinorItems = random.randint(2, 4)
+    numberOfMajorItems = random.randint(0, min(3, 5 - numberOfMinorItems))
+    currentMinorItems = random.sample(minorItems, numberOfMinorItems)
+    currentMajorItems = random.sample(majorItems, numberOfMajorItems)
+    currentItems = currentMinorItems + currentMajorItems
+    triggerLocations = random.choices(level.itemTiles, k=(numberOfMajorItems + numberOfMinorItems))
+    itemLocations = random.sample(level.itemTiles, k=(numberOfMajorItems + numberOfMinorItems))
+    for item in minorItems:
+        item.itemState = OtherState.DEAD
+    for item in majorItems:
+        item.itemState = OtherState.DEAD
+    for num, item in enumerate(currentItems):
+        item.initialize(itemLocations[num][0], itemLocations[num][1],
+                        triggerLocations[num][0], triggerLocations[num][1])
