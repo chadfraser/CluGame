@@ -1,12 +1,13 @@
 import pygame
 import os
-import sys
 import random
 from enum import Enum
 from CluLevels import BonusLevel
+from CluGlobals import getImage, playSound
 
 
-"""Enemies: Pushing sound effect
+"""Enemies: Pushing sound effect (25)
+            Trap collision
    Gold: Level complete
    Gameplay: Random item locations
              Random level order
@@ -35,8 +36,8 @@ Text sprite"""
 """Collect clock: Change color of ..."""
 
 
-SCREEN_SIZE = (512, 448)
-SCREEN = pygame.display.set_mode(SCREEN_SIZE)
+# SCREEN_SIZE = (512, 448)
+# SCREEN = pygame.display.set_mode(SCREEN_SIZE)
 
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
@@ -46,44 +47,6 @@ YELLOW = (255, 200, 15)
 gameFolder = os.path.dirname(__file__)
 spriteFolder = os.path.join(gameFolder, "Sprites")
 spriteSheetFolder = os.path.join(gameFolder, "SpriteSheets")
-backgroundFolder = os.path.join(gameFolder, "Backgrounds")
-titleFolder = os.path.join(gameFolder, "Titles")
-musicFolder = os.path.join(gameFolder, "Music")
-
-_imageLibrary = {}
-_soundLibrary = {}
-
-
-def getImage(folder, imageFile):
-    global _imageLibrary
-    image = _imageLibrary.get(imageFile)
-    if image is None:
-        fullPath = os.path.join(folder, imageFile)
-        try:
-            image = pygame.image.load(fullPath).convert()
-            _imageLibrary[imageFile] = image
-        except pygame.error:
-            print("ERROR: Cannot find image '{}'".format(imageFile))
-            pygame.quit()
-            sys.exit()
-    return image
-
-
-def playSound(soundFile):
-    global _soundLibrary
-    sound = _soundLibrary.get(soundFile)
-    if sound is None:
-        fullPath = os.path.join(musicFolder, soundFile)
-        try:
-            sound = pygame.mixer.Sound(fullPath)
-            _soundLibrary[soundFile] = sound
-        except pygame.error:
-            print("ERROR: Cannot find sound '{}'".format(soundFile))
-            pygame.quit()
-            sys.exit()
-        # if soundFile == "push_or_shoot_enemy.wav":
-        #     sound.set_volume(0.5)
-    sound.play()
 
 
 class SpriteSheet:
@@ -137,16 +100,19 @@ class EnemyState(Enum):
     WAITING = "waiting"
     EXPLODING = "exploding"
     OFF_SCREEN = "off screen"
+    FROZEN = "frozen"
     DEAD = "dead"
 
 
 class OtherState(Enum):
     REVEALED = "revealed"
-    UPSIDE_DOWN = "flipped over"
+    UPSIDE_DOWN = "upside down"
     FLIPPING_UP = "flipping up"
     FLIPPING_DOWN = "flipping down"
     OFF_SCREEN = "off screen"
+    COLLECTED = "collected"
     TRIGGERED = "triggered"
+    DEAD = "dead"
 
 
 class Directions(Enum):
@@ -428,9 +394,10 @@ class PlayerSprite(pygame.sprite.Sprite):
             else:
                 self.changeImage(imageKey, 3)
             if self.frameCount % 8 == 0:
-                self.swing()
+                self.adjustPosition()
+                self.rebound()
                 self.frameCount = 0
-                self.playerState = PlayerStates.SWINGING
+                self.playerState = PlayerStates.MOVING
         elif self.playerState == PlayerStates.LEVEL_END:
             self.animateLevelEnd()
 
@@ -569,7 +536,8 @@ class PlayerSprite(pygame.sprite.Sprite):
 
     def moveSwingSprite(self):
         moveValueA = moveValueB = 0
-        if self.swingFrameCount % 85 in (0, 1, 2, 3, 5, 7, 8, 10, 11, 13, 15, 18, 68, 69, 72, 74, 76, 77, 79, 80, 81, 84):
+        if self.swingFrameCount % 85 in (0, 1, 2, 3, 5, 7, 8, 10, 11, 13, 15, 18, 68, 69, 72, 74, 76, 77, 79, 80, 81,
+                                         84):
             moveValueA += 2
         if self.swingFrameCount % 85 in (25, 28, 30, 31, 32, 34, 36, 39, 40, 41, 42, 44, 45, 46, 47, 51, 52, 53, 55,
                                          57, 59, 62):
@@ -831,11 +799,7 @@ class PlayerArmSprite(pygame.sprite.Sprite):
                 self.playerBody.playerState = PlayerStates.SWINGING
                 self.setSwingDirection()
                 offsets = (self.collisionRect[0] % 48 - 34, self.collisionRect[1] % 48 - 36)
-                # print(self.coordinates[0] % 48, self.coordinates[1] % 48, self.rect.topleft,
-                #       self.collisionRect.topleft, self.wallCollisionRect.topleft)
                 self.offsetCoordinates(offsets[0], offsets[1])
-                # print(self.coordinates[0] % 48, self.coordinates[1] % 48, self.rect.topleft,
-                #       self.collisionRect.topleft, self.wallCollisionRect.topleft)
                 if self.swingingDirections[1] == Directions.CLOCKWISE:
                     if self.extendedDirection == Directions.RIGHT:
                         self.playerBody.setCoordinates(self.playerBody.coordinates[0] - offsets[0],
@@ -882,6 +846,9 @@ class PlayerArmSprite(pygame.sprite.Sprite):
         self.playerBody.swingingDirections = [self.extendedDirection, directionValue]
 
     def swing(self):
+        if self.playerBody.playerState == PlayerStates.MOVING:
+            self.armState = ArmStates.OFF_SCREEN
+            return
         currentDirectionIndex = self.directionList.index(self.extendedDirection)
         if any(self.swingFrameCount % 85 == self.playerBody.keyFrames[n] for n in range(0, 7, 2)):
             if self.swingingDirections[1] == Directions.CLOCKWISE:
@@ -1114,15 +1081,6 @@ class UrchinSprite(pygame.sprite.Sprite):
             else:
                 imageKey = "vertical"
         self.image = self.imageDict[self.color][imageKey][imageIndex]
-        # if self.enemyState == EnemyState.MOVING:
-        #     if self.frameCount % 16 < 9:
-        #         pass
-        # else:
-        #     if self.enemyState == EnemyState.BALL or (self.frameCount % 8 < 5 and
-        #                                               self.enemyState != EnemyState.SMALL_BALL):
-        #         imageIndex = 0
-        #     else:
-        #         imageIndex = 1
 
     def update(self):
         self.checkSonicWaveCollision()
@@ -1567,66 +1525,9 @@ class RubberTrapSprite(pygame.sprite.Sprite):
             return 0
 
 
-class Item(pygame.sprite.Sprite):
-    def __init__(self):
-        super().__init__(itemGroup)
-        super().__init__(rubberGroup)
-        spriteSheet = SpriteSheet("item.png")
-        self.animationFrames = []
-
-        self.coordinates = (0, 0)
-        self.itemState = OtherState.OFF_SCREEN
-        self.frameCount = 0
-
-        self.animationFrames.extend(spriteSheet.getStripImages(0, 0, 34, 34))
-        self.imageDictKeys = ["apple", "banana", "cherry", "eggplant", "melon", "pineapple", "strawberry",
-                              "bag", "clock", "flag", "glasses", "explosion_1", "explosion_2", "empty"]
-        self.imageDict = dict(zip(self.imageDictKeys, self.animationFrames))
-
-        self.image = self.imageDict["empty"]
-        self.rect = self.image.get_rect()
-        self.collisionRect = pygame.rect.Rect((0, 0), (18, 28))
-
-    def setCoordinates(self, x, y):
-        self.coordinates = x, y
-        self.rect.topleft = x, y
-        self.collisionRect.topleft = x + 8, y + 4
-
-    def update(self):
-        if self.itemState == OtherState.REVEALED:
-            pass
-        else:
-            self.image = self.imageDict["empty"]
-        self.checkPlayerCollision()
-        self.image.set_colorkey(BLACK)
-
-    def checkPlayerCollision(self):
-        # if any(self.rect.collidepoint(player.rect.center) for player in playerGroup) and \
-        #                 self.trapState != OtherState.TRIGGERED:
-        #     self.collidingPlayer = pygame.sprite.spritecollide(self, playerGroup, False)[0]
-        #     self.trapState = OtherState.TRIGGERED
-        #     if self.collidingPlayer.facingDirection == Directions.RIGHT or \
-        #                     self.collidingPlayer.facingDirection == Directions.UP:
-        #         self.flipTrigger = True
-        #     else:
-        #         self.flipTrigger = False
-        #     playSound("item_appears_or_collected.wav")
-        pass
-
-    def collectItem(self):
-        self.frameCount += 1
-        if self.frameCount % 24 < 9:
-            self.image = self.imageDict["explosion 1"]
-        else:
-            self.image = self.imageDict["explosion 2"]
-        if self.frameCount % 24 == 0:
-            self.itemState = OtherState.OFF_SCREEN
-            self.frameCount = 0
-
-
 class PointsSprite(pygame.sprite.Sprite):
     def __init__(self, pointsImage, emptyImage, passingDirection=Directions.RIGHT):
-        super().__init__(itemGroup)
+        super().__init__(textGroup)
         self.emptyImage = emptyImage
         self.image = pointsImage
         self.image.set_colorkey(BLACK)
@@ -1656,6 +1557,7 @@ class GameOverTextSprite(pygame.sprite.Sprite):
         self.image.set_colorkey(BLACK)
         self.coordinates = (20, 478)
         self.playerNumber = playerNumber
+        self.frameCount = 0
 
     def initialize(self):
         if self.playerNumber == 1:
@@ -1664,5 +1566,178 @@ class GameOverTextSprite(pygame.sprite.Sprite):
             self.coordinates = (430, 478)
 
     def update(self):
+        self.frameCount += 1
         if self.coordinates[1] > 38:
             self.coordinates = (self.coordinates[0], self.coordinates[1] - 4)
+        if self.frameCount == 300:
+            self.kill()
+
+
+class Item(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__(itemGroup)
+        spriteSheet = SpriteSheet("item.png")
+        self.animationFrames = []
+        self.coordinates = (0, 0)
+        self.itemState = OtherState.OFF_SCREEN
+        self.collectingPlayer = None
+        self.frameCount = 0
+
+        self.animationFrames.extend(spriteSheet.getStripImages(0, 0, 34, 34))
+        self.animationFrames.extend(spriteSheet.getStripImages(0, 34, 34, 34))
+        self.imageDictKeys = ["apple", "banana", "cherry", "eggplant", "melon", "pineapple", "strawberry", "800",
+                              "bag", "clock", "flag", "glasses", "explosion 1", "explosion 2", "empty", "1500"]
+        self.imageDict = dict(zip(self.imageDictKeys, self.animationFrames))
+
+        self.image = self.baseImage = self.imageDict["empty"]
+        self.rect = self.image.get_rect()
+        self.collisionRect = pygame.rect.Rect((0, 0), (18, 28))
+
+    def setCoordinates(self, x, y):
+        self.coordinates = x, y
+        self.rect.topleft = x, y
+        self.collisionRect.topleft = x + 8, y + 4
+
+    def initialize(self, x, y):
+        self.setCoordinates(x, y)
+        self.itemState = OtherState.OFF_SCREEN
+
+    def update(self):
+        if self.itemState == OtherState.COLLECTED:
+            self.collectItem()
+        elif self.itemState == OtherState.REVEALED:
+            self.image = self.baseImage
+            self.checkPlayerCollision()
+        else:
+            self.image = self.imageDict["empty"]
+        self.image.set_colorkey(BLACK)
+
+    def checkPlayerCollision(self):
+        for player in playerGroup:
+            if self.rect.collidepoint(player.rect.center) and self.itemState == OtherState.REVEALED:
+                self.collectingPlayer = player
+                self.itemState = OtherState.COLLECTED
+
+    def collectItem(self):
+        pass
+
+
+class MinorItem(Item):
+    def __init__(self, imageKey):
+        super().__init__()
+        self.baseImage = self.imageDict[imageKey]
+
+    def collectItem(self):
+        self.frameCount += 1
+        if self.frameCount == 1:
+            self.collectingPlayer.score += 800
+        if self.frameCount % 56 < 12:
+            self.image = self.imageDict["explosion 1"]
+        elif self.frameCount % 56 < 24:
+            self.image = self.imageDict["explosion 2"]
+        else:
+            self.image = self.imageDict["800"]
+        if self.frameCount == 24:
+            playSound("item_appears_or_collected.wav")
+        if self.frameCount % 56 == 0:
+            self.itemState = OtherState.DEAD
+
+
+class ItemBag(Item):
+    def __init__(self):
+        super().__init__()
+        self.baseImage = self.imageDict["bag"]
+
+    def collectItem(self):
+        self.frameCount += 1
+        if self.frameCount == 1:
+            self.collectingPlayer.score += 1500
+        if self.frameCount % 56 < 12:
+            self.image = self.imageDict["explosion 1"]
+        elif self.frameCount % 56 < 24:
+            self.image = self.imageDict["explosion 2"]
+        else:
+            self.image = self.imageDict["1500"]
+        if self.frameCount == 24:
+            playSound("item_appears_or_collected.wav")
+        if self.frameCount % 56 == 0:
+            self.itemState = OtherState.DEAD
+
+
+class ItemClock(Item):
+    def __init__(self):
+        super().__init__()
+        self.baseImage = self.imageDict["clock"]
+
+    def collectItem(self):
+        self.frameCount += 1
+        if self.frameCount == 1:
+            for sprite in enemyGroup:
+                sprite.enemyState = EnemyState.FROZEN
+            for sprite in playerGroup:
+                if sprite is not self.collectingPlayer:
+                    sprite.playerState = PlayerStates.FROZEN
+        if self.frameCount % 24 < 12:
+            self.image = self.imageDict["explosion 1"]
+        else:
+            self.image = self.imageDict["explosion 2"]
+        if self.frameCount == 24:
+            playSound("item_appears_or_collected.wav")
+            self.image = self.imageDict["empty"]
+            self.itemState = OtherState.DEAD
+
+
+class ItemFlag(Item):
+    def __init__(self):
+        super().__init__()
+        self.baseImage = self.imageDict["flag"]
+
+    def collectItem(self):
+        self.frameCount += 1
+        if self.frameCount == 1:
+            self.collectingPlayer.lives += 1
+        if self.frameCount % 24 < 12:
+            self.image = self.imageDict["explosion 1"]
+        else:
+            self.image = self.imageDict["explosion 2"]
+        if self.frameCount == 24:
+            playSound("item_appears_or_collected.wav")
+            self.image = self.imageDict["empty"]
+            self.itemState = OtherState.DEAD
+
+
+class ItemGlasses(Item):
+    def __init__(self):
+        super().__init__()
+        self.baseImage = self.imageDict["glasses"]
+
+    def collectItem(self):
+        self.frameCount += 1
+        if self.frameCount == 1:
+            for sprite in itemGroup:
+                if sprite.itemState == OtherState.OFF_SCREEN:
+                    sprite.itemState = OtherState.REVEALED
+            for sprite in goldGroup:
+                if sprite.goldState == OtherState.OFF_SCREEN:
+                    sprite.goldState = OtherState.UPSIDE_DOWN
+        if self.frameCount % 24 < 12:
+            self.image = self.imageDict["explosion 1"]
+        else:
+            self.image = self.imageDict["explosion 2"]
+        if self.frameCount == 24:
+            playSound("item_appears_or_collected.wav")
+            self.image = self.imageDict["empty"]
+            self.itemState = OtherState.DEAD
+
+
+APPLE_ITEM = MinorItem("apple")
+BANANA_ITEM = MinorItem("banana")
+CHERRY_ITEM = MinorItem("cherry")
+EGGPLANT_ITEM = MinorItem("eggplant")
+MELON_ITEM = MinorItem("melon")
+PINEAPPLE_ITEM = MinorItem("pineapple")
+STRAWBERRY_ITEM = MinorItem("strawberry")
+BAG_ITEM = ItemBag()
+CLOCK_ITEM = ItemClock()
+FLAG_ITEM = ItemFlag()
+GLASSES_ITEM = ItemGlasses()
