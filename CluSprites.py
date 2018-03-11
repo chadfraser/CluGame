@@ -8,21 +8,15 @@ from CluGlobals import getImage, playSound
 
 
 """Enemies: Pushing sound effect (25)
-            Trap collision
    Gold: Level complete
-   Gameplay: Random item locations
-             Random level order
-             Spawning items
+   Gameplay: Random level order
              Level complete (Tally points, animate, sound effects, bonus)
              Game over screen
-   Bonus level differences
-   Priority of wall pushing"""
+   Bonus level differences"""
 
 """Fix pushing urchin sound effect
 Fix window icon
 Fix urchin push locations, wall hit boxes, hit while spinning
-Fix clock countdown pause
-First frame grab, moving up holding left
 Fix low time music"""
 
 """Finish player end screen animation"""
@@ -221,12 +215,13 @@ class PlayerSprite(pygame.sprite.Sprite):
         self.lives = 5
         self.baseCoordinates = (0, 0)
         self.coordinates = (0, 0)
+        self.swingingArmCoordinates = (0, 0)
         self.playerState = OtherState.OFF_SCREEN
         self.facingDirection = Directions.RIGHT
-        self.swingingDirections = [Directions.RIGHT, Directions.CLOCKWISE]
+        self.swingingDirection = Directions.CLOCKWISE
         self.bouncingOffWall = self.bouncingOffPlayer = self.isFrozen = False
         self.killedUrchinCount = self.goldCollectedCount = self.score = 0
-        self.frameCount = self.swingFrameCount = 0
+        self.frameCount = self.currentAngle = 0
 
         self.imageDict = {"arm": [], "ball": [], "end": [], "death": [], "turn": [], "fall": [],  # #######
                           "move": {}, "squish": {}}
@@ -251,35 +246,24 @@ class PlayerSprite(pygame.sprite.Sprite):
 
     def flipImage(self):
         if self.playerState not in [PlayerStates.SWINGING, PlayerStates.HITTING_PLAYER_SWINGING] or\
-                self.getOrthogonalTurnState():
+                self.isTurningOrthogonally():
             if self.facingDirection == Directions.LEFT:
                 self.image = pygame.transform.flip(self.image, True, False)
             elif self.facingDirection == Directions.UP:
                 self.image = pygame.transform.flip(self.image, False, True)
 
-    def rotateImage(self):
-        if self.swingingDirections[1] == Directions.CLOCKWISE:
-            if self.swingingDirections[0] in [Directions.DOWN, Directions.RIGHT]:
-                if self.keyFrames[0] <= self.swingFrameCount % 85 < self.keyFrames[3]:
-                    self.image = pygame.transform.flip(self.image, False, True)
-                if self.keyFrames[2] <= self.swingFrameCount % 85 < self.keyFrames[5]:
-                    self.image = pygame.transform.flip(self.image, True, False)
-            else:
-                if self.swingFrameCount % 85 < self.keyFrames[1] or self.keyFrames[6] <= self.swingFrameCount % 85:
-                    self.image = pygame.transform.flip(self.image, True, False)
-                if self.keyFrames[4] <= self.swingFrameCount % 85:
-                    self.image = pygame.transform.flip(self.image, False, True)
+    def flipDiagonalImage(self):
+        adjustedAngle = (self.currentAngle % 360) // 22.5
+        if self.swingingDirection == Directions.CLOCKWISE:
+            if adjustedAngle in [1, 2, 13, 14]:
+                self.image = pygame.transform.flip(self.image, False, True)
+            if adjustedAngle in [1, 2, 5, 6]:
+                self.image = pygame.transform.flip(self.image, True, False)
         else:
-            if self.swingingDirections[0] in [Directions.UP, Directions.LEFT]:
-                if self.keyFrames[0] <= self.swingFrameCount % 85 < self.keyFrames[3]:
-                    self.image = pygame.transform.flip(self.image, True, False)
-                if self.keyFrames[2] <= self.swingFrameCount % 85 < self.keyFrames[5]:
-                    self.image = pygame.transform.flip(self.image, False, True)
-            else:
-                if self.swingFrameCount % 85 < self.keyFrames[1] or self.keyFrames[6] <= self.swingFrameCount % 85:
-                    self.image = pygame.transform.flip(self.image, False, True)
-                if self.keyFrames[4] <= self.swingFrameCount % 85:
-                    self.image = pygame.transform.flip(self.image, True, False)
+            if adjustedAngle in [5, 6, 9, 10]:
+                self.image = pygame.transform.flip(self.image, False, True)
+            if adjustedAngle in [9, 10, 13, 14]:
+                self.image = pygame.transform.flip(self.image, True, False)
 
     def setCoordinates(self, x, y):
         self.coordinates = x, y
@@ -332,10 +316,7 @@ class PlayerSprite(pygame.sprite.Sprite):
                 self.frameCount = 0
                 self.playerState = PlayerStates.MOVING
         elif self.playerState == PlayerStates.SWINGING:
-            if not self.isFrozen:
-                self.swingFrameCount += 1
-                self.swingFrameCount %= 85
-                self.swing()
+            self.swing()
         elif self.playerState == PlayerStates.HITTING_PLAYER_MOVING or\
                 self.playerState == PlayerStates.HITTING_PLAYER_SWINGING:
             self.bounceOffOfPlayer()
@@ -377,8 +358,6 @@ class PlayerSprite(pygame.sprite.Sprite):
         if self.bouncingOffPlayer:
             otherPlayers = [player for player in playerGroup if (player != self and
                             player.playerState in [PlayerStates.MOVING, PlayerStates.SWINGING,
-                                                   PlayerStates.HITTING_PLAYER_MOVING,
-                                                   PlayerStates.HITTING_PLAYER_SWINGING,
                                                    PlayerStates.FINISHED_SWINGING])]
             if not any(player.collisionRect.colliderect(self.collisionRect) for player in otherPlayers):
                 self.bouncingOffPlayer = False
@@ -456,7 +435,7 @@ class PlayerSprite(pygame.sprite.Sprite):
 
     def bounceOffOfPlayer(self):
         imageKey = "move"
-        if self.playerState == PlayerStates.HITTING_PLAYER_SWINGING and not self.getOrthogonalTurnState():
+        if self.playerState == PlayerStates.HITTING_PLAYER_SWINGING and not self.isTurningOrthogonally():
             imageKey = "turn"
         if any(self.rect.colliderect(levelRect) for levelRect in PlayerSprite.currentLevel.levelBorderRects):
             self.frameCount = 0
@@ -464,21 +443,33 @@ class PlayerSprite(pygame.sprite.Sprite):
             self.bouncingOffWall = True
         else:
             if self.frameCount == 12:
-                if self.playerState == PlayerStates.HITTING_PLAYER_SWINGING:
-                    self.adjustPosition()
-                self.rebound()
+                if self.playerState == PlayerStates.HITTING_PLAYER_MOVING:
+                    self.rebound()
+                elif self.swingingDirection == Directions.CLOCKWISE:
+                    self.swingingDirection = Directions.COUNTER
+                    # self.currentAngle -= 2 * PlayerSprite.rotationSpeed
+                else:
+                    self.swingingDirection = Directions.CLOCKWISE
+                    # self.currentAngle += 2 * PlayerSprite.rotationSpeed
             elif self.frameCount % 16 < 6:
                 self.changeImage(imageKey, 2)
             elif self.frameCount % 16 < 12:
                 self.changeImage(imageKey, 3)
             else:
-                self.moveSprite()
-                self.animateMovement()
+                if self.playerState == PlayerStates.HITTING_PLAYER_MOVING:
+                    self.moveSprite()
+                    self.animateMovement()
+                else:
+                    self.swing()
             if self.frameCount % 16 == 0 and not self.isFrozen:
+                if self.playerState == PlayerStates.HITTING_PLAYER_MOVING:
+                    self.moveSprite()
+                    self.animateMovement()
+                    self.playerState = PlayerStates.MOVING
+                else:
+                    self.swing()
+                    self.playerState = PlayerStates.SWINGING
                 self.frameCount = 0
-                self.moveSprite()
-                self.animateMovement()
-                self.playerState = PlayerStates.MOVING
                 self.bouncingOffPlayer = False
 
     def changeDirection(self):
@@ -491,111 +482,56 @@ class PlayerSprite(pygame.sprite.Sprite):
         else:
             self.facingDirection = Directions.LEFT
 
-    def changeSwingDirection(self):
-        if self.swingingDirections[0] == Directions.UP:
-            self.swingingDirections[0] = Directions.DOWN
-        elif self.swingingDirections[0] == Directions.DOWN:
-            self.swingingDirections[0] = Directions.UP
-        elif self.swingingDirections[0] == Directions.LEFT:
-            self.swingingDirections[0] = Directions.RIGHT
-        elif self.swingingDirections[0] == Directions.RIGHT:
-            self.swingingDirections[0] = Directions.LEFT
-        if self.getOrthogonalTurnState():
-            self.animateMovement()
-        elif self.frameCount % 8 < 4:
-            self.image = self.imageDict["turn"][0]
-            self.rotateImage()
+    def changeSwingingDirection(self):
+        if 29 < self.currentAngle < 120:
+            self.facingDirection = Directions.LEFT
+        elif 119 < self.currentAngle < 210:
+            self.facingDirection = Directions.UP
+        elif 209 < self.currentAngle < 300:
+            self.facingDirection = Directions.RIGHT
         else:
-            self.image = self.imageDict["turn"][1]
-        # self.image = self.imageDict["move"][self.getDirectionKey()][0]
+            self.facingDirection = Directions.DOWN
+        if self.swingingDirection == Directions.COUNTER:
+            self.changeDirection()
 
-    def getOrthogonalTurnState(self):
-        if self.swingFrameCount % 85 < self.keyFrames[0] or self.keyFrames[7] <= self.swingFrameCount % 85 or\
-                any(self.keyFrames[n] <= self.swingFrameCount % 85 < self.keyFrames[n+1] for n in range(1, 6, 2)):
+    def isTurningOrthogonally(self):
+        adjustedAngle = (self.currentAngle % 360) // 22.5
+        if adjustedAngle in [0, 3, 4, 7, 8, 11, 12, 15]:
             return True
         return False
 
+    def rotateImageAroundPoint(self):
+        radianAngle = math.radians(self.currentAngle)
+        horizontalValue = self.swingingArmCoordinates[0] + 23 * math.cos(radianAngle)
+        verticalValue = self.swingingArmCoordinates[1] + 23 * math.sin(radianAngle)
+        self.rect.center = horizontalValue, verticalValue
+        self.setCoordinates(self.rect.topleft[0], self.rect.topleft[1])
+
     def swing(self):
-        currentDirectionIndex = self.directionList.index(self.facingDirection)
-        if any(self.swingFrameCount % 85 == self.keyFrames[n] + 2 for n in range(0, 7, 2)):
-            if self.swingingDirections[1] == Directions.CLOCKWISE:
-                self.facingDirection = self.directionList[currentDirectionIndex - 1]
+        if not self.isFrozen:
+            if self.swingingDirection == Directions.CLOCKWISE:
+                self.currentAngle += PlayerSprite.rotationSpeed
             else:
-                self.facingDirection = self.directionList[(currentDirectionIndex + 1) % 4]
-        if self.getOrthogonalTurnState():
+                self.currentAngle -= PlayerSprite.rotationSpeed
+            self.currentAngle %= 360
+            self.rotateImageAroundPoint()
+            self.changeSwingingDirection()
+            for gold in goldGroup:
+                if gold.collisionRect.collidepoint(self.rect.center) and gold.goldState in [OtherState.OFF_SCREEN,
+                                                                                            OtherState.REVEALED,
+                                                                                            OtherState.UPSIDE_DOWN]:
+                    gold.passingDirection = self.facingDirection
+                    if not gold.alreadyRevealed:
+                        self.goldCollectedCount += 1
+                    gold.startFlipAnimation()
+        if self.isTurningOrthogonally():
             self.animateMovement()
         elif self.frameCount % 8 < 4:
             self.image = self.imageDict["turn"][0]
-            self.rotateImage()
+            self.flipDiagonalImage()
         else:
             self.image = self.imageDict["turn"][1]
-            self.rotateImage()
-
-        if self.swingFrameCount % 85 == 0:
-            self.swingFrameCount = 0
-        if self.frameCount % 8 == 0:
-            self.frameCount = 0
-        self.moveSwingSprite()
-        for gold in goldGroup:
-            if gold.collisionRect.collidepoint(self.rect.center) and gold.goldState in\
-                    [OtherState.OFF_SCREEN, OtherState.REVEALED, OtherState.UPSIDE_DOWN]:
-                gold.passingDirection = self.facingDirection
-                if not gold.alreadyRevealed:
-                    self.goldCollectedCount += 1
-                gold.startFlipAnimation()
-
-    def moveSwingSprite(self):
-        moveValueA = moveValueB = 0
-        if self.swingFrameCount % 85 in (0, 1, 2, 3, 5, 7, 8, 10, 11, 13, 15, 18, 68, 69, 72, 74, 76, 77, 79, 80, 81,
-                                         84):
-            moveValueA += 2
-        if self.swingFrameCount % 85 in (25, 28, 30, 31, 32, 34, 36, 39, 40, 41, 42, 44, 45, 46, 47, 51, 52, 53, 55,
-                                         57, 59, 62):
-            moveValueA -= 2
-        if self.swingFrameCount % 85 in (4, 7, 9, 11, 13, 14, 15, 18, 19, 20, 21, 23, 24, 25, 26, 29, 30, 31, 33, 35,
-                                         36, 37, 40):
-            moveValueB += 2
-        if self.swingFrameCount % 85 in (47, 48, 50, 52, 55, 56, 58, 59, 61, 63, 64, 65, 66, 68, 69, 70, 72, 73, 74,
-                                         75, 77, 78, 80, 83):
-            moveValueB -= 2
-        if self.swingingDirections[1] == Directions.CLOCKWISE:
-            if self.swingingDirections[0] == Directions.RIGHT:
-                self.setCoordinates(self.coordinates[0] + moveValueA, self.coordinates[1] + moveValueB)
-                horizontalOffsets = [6, 2, 0, 0, -4, 0, -4, 0]
-                verticalOffsets = [0, -2, 6, -2, 2, -2, 0, 0]
-            elif self.swingingDirections[0] == Directions.DOWN:
-                self.setCoordinates(self.coordinates[0] + moveValueA, self.coordinates[1] + moveValueB)
-                horizontalOffsets = [4, 2, 0, 0, -4, 0, -2, 0]
-                verticalOffsets = [0, -2, 6, -2, 4, -2, -2, 0]
-            elif self.swingingDirections[0] == Directions.LEFT:
-                self.setCoordinates(self.coordinates[0] - moveValueA, self.coordinates[1] - moveValueB)
-                horizontalOffsets = [-6, 0, -2, 0, 4, 2, 2, 0]
-                verticalOffsets = [2, -2, -2, 0, -2, 0, 4, -2]
-            else:
-                self.setCoordinates(self.coordinates[0] - moveValueA, self.coordinates[1] - moveValueB)
-                horizontalOffsets = [-4, 0, 2, -2, 2, 2, 2, -2]
-                verticalOffsets = [2, -2, -2, 0, -2, -2, 6, -2]
-        else:
-            if self.swingingDirections[0] == Directions.RIGHT:
-                horizontalOffsets = [-2, -2, 6, 0, 2, 0, -4, 2]
-                verticalOffsets = [6, 0, 2, 0, -2, -4, -2, 0]
-                self.setCoordinates(self.coordinates[0] + moveValueB, self.coordinates[1] + moveValueA)
-            elif self.swingingDirections[0] == Directions.DOWN:
-                horizontalOffsets = [0, -2, 2, 2, 2, 0, -4, 2]
-                verticalOffsets = [8, 0, 2, -2, -2, -2, 0, -4]
-                self.setCoordinates(self.coordinates[0] + moveValueB, self.coordinates[1] + moveValueA)
-            elif self.swingingDirections[0] == Directions.LEFT:
-                horizontalOffsets = [0, 2, -6, 2, -4, 0, 4, 0]  # LAST
-                verticalOffsets = [-2, -2, -2, -2, 4, 4, 0, 0]
-                self.setCoordinates(self.coordinates[0] - moveValueB, self.coordinates[1] - moveValueA)
-            else:
-                horizontalOffsets = [0, 0, -2, 0, -4, 0, 4, 0]
-                verticalOffsets = [-4, 0, -2, -2, 6, 2, 2, -2]
-                self.setCoordinates(self.coordinates[0] - moveValueB, self.coordinates[1] - moveValueA)
-        if self.swingFrameCount in self.keyFrames:
-            currentFrameCountIndex = self.keyFrames.index(self.swingFrameCount)
-            self.coordinates = (self.coordinates[0] + horizontalOffsets[currentFrameCountIndex],
-                                self.coordinates[1] + verticalOffsets[currentFrameCountIndex])
+            self.flipDiagonalImage()
 
     def checkEnemyCollision(self):
         if self.playerState in [PlayerStates.MOVING, PlayerStates.SWINGING, PlayerStates.FINISHED_SWINGING,
@@ -639,35 +575,26 @@ class PlayerSprite(pygame.sprite.Sprite):
                 self.bouncingOffWall and not self.bouncingOffPlayer:
             otherPlayers = [player for player in playerGroup if (player != self and
                             player.playerState in [PlayerStates.MOVING, PlayerStates.SWINGING,
-                                                   PlayerStates.FINISHED_SWINGING, PlayerStates.HITTING_PLAYER_MOVING,
-                                                   PlayerStates.HITTING_PLAYER_SWINGING])]
+                                                   PlayerStates.FINISHED_SWINGING])]
             for player in otherPlayers:
                 if player.collisionRect.colliderect(self.collisionRect):
                     playSound("bounce_rubber_or_player.wav")
                     self.frameCount = 0
                     self.bouncingOffPlayer = True
+                    player.checkOtherPlayerCollision()
                     if self.playerState in [PlayerStates.MOVING, PlayerStates.FINISHED_SWINGING]:
                         self.playerState = PlayerStates.HITTING_PLAYER_MOVING
                         self.image = self.imageDict["move"][self.getDirectionKey()][2]
                     else:
                         self.playerState = PlayerStates.HITTING_PLAYER_SWINGING
-                        if self.swingingDirections[1] == Directions.CLOCKWISE:
-                            self.swingingDirections[1] = Directions.COUNTER
-                            self.swingFrameCount += 21
-                        else:
-                            self.swingingDirections[1] = Directions.CLOCKWISE
-                            self.swingFrameCount -= 21
-
-                        if self.getOrthogonalTurnState():
+                        if self.isTurningOrthogonally():
                             self.image = self.imageDict["move"][self.getDirectionKey()][2]
                         elif self.frameCount % 8 < 4:
                             self.image = self.imageDict["turn"][2]
-                            self.rotateImage()
+                            self.flipDiagonalImage()
                         else:
                             self.image = self.imageDict["turn"][3]
-                            self.rotateImage()
-                        self.swingFrameCount %= 85
-                        self.changeSwingDirection()
+                            self.flipDiagonalImage()
 
     def adjustPosition(self):
         if self.isFacingHorizontally():
@@ -702,10 +629,10 @@ class PlayerArmSprite(pygame.sprite.Sprite):
         super().__init__(armGroup)
         self.playerBody = playerBody
         self.coordinates = (0, 0)
+        self.swingingCoordinates = (0, 0)
         self.armState = ArmStates.OFF_SCREEN
         self.extendedDirection = Directions.RIGHT
-        self.swingingDirections = [Directions.RIGHT, Directions.CLOCKWISE]
-        self.swingFrameCount = 0
+        self.currentAngleOctant = 0
 
         self.emptyImage = self.playerBody.emptyImage
         self.image = self.emptyImage
@@ -721,7 +648,6 @@ class PlayerArmSprite(pygame.sprite.Sprite):
             horizontalOffset -= 10
         elif self.playerBody.facingDirection == Directions.UP:
             verticalOffset -= 10
-
         if self.extendedDirection == Directions.UP:
             self.coordinates = (x + horizontalOffset, y - 12)
             self.collisionRect = pygame.rect.Rect((self.coordinates[0] + 2, self.coordinates[1]), (12, 12))
@@ -741,12 +667,12 @@ class PlayerArmSprite(pygame.sprite.Sprite):
         self.coordinates = (self.coordinates[0] - x, self.coordinates[1] - y)
         self.rect.topleft = self.coordinates
         self.collisionRect = pygame.rect.Rect((self.collisionRect[0] - x, self.collisionRect[1] - y), (12, 12))
+        self.swingingCoordinates = (self.coordinates[0], self.coordinates[1])
         self.wallCollisionRect = pygame.rect.Rect((self.coordinates[0] - 14, self.coordinates[1] - 14), (40, 40))
 
     def rotateImage(self):
-        if self.extendedDirection in PlayerArmSprite.directionList:
-            rotationDegrees = 90 * PlayerArmSprite.directionList.index(self.extendedDirection)
-            self.image = pygame.transform.rotate(self.image, rotationDegrees)
+        rotationDegrees = 90 * PlayerArmSprite.directionList.index(self.extendedDirection)
+        self.image = pygame.transform.rotate(self.image, rotationDegrees)
         self.flipImage()
 
     def flipImage(self):
@@ -759,20 +685,39 @@ class PlayerArmSprite(pygame.sprite.Sprite):
                 self.image = pygame.transform.flip(self.image, True, False)
             if self.playerBody.facingDirection == Directions.UP:
                 self.image = pygame.transform.flip(self.image, False, True)
-
-    def flipSwingingImage(self):
-        if any(self.playerBody.keyFrames[n] <= self.swingFrameCount < self.playerBody.keyFrames[n+1] for n in
-               range(0, 7, 2)):
-            self.image = pygame.transform.flip(self.image, True, False)
-        if self.swingingDirections[0] in [Directions.DOWN, Directions.RIGHT]:
-            if any(self.playerBody.keyFrames[n] <= self.swingFrameCount < self.playerBody.keyFrames[n+2] for n in
-                   range(2, 6, 3)):
-                self.image = pygame.transform.flip(self.image, False, True)
         else:
-            if self.swingFrameCount < self.playerBody.keyFrames[0] or\
-                        self.playerBody.keyFrames[1] <= self.swingFrameCount < self.playerBody.keyFrames[3] or \
-                        self.playerBody.keyFrames[6] <= self.swingFrameCount:
+            adjustedAngle = (self.playerBody.currentAngle % 360) // 22.5
+            if self.playerBody.swingingDirection == Directions.CLOCKWISE:
+                if adjustedAngle in [5, 6, 7, 8]:
+                    self.image = pygame.transform.flip(self.image, False, True)
+                if adjustedAngle in [1, 2, 3, 4]:
+                    self.image = pygame.transform.flip(self.image, True, False)
+            else:
+                if adjustedAngle in [0, 1, 2, 15]:
+                    self.image = pygame.transform.flip(self.image, False, True)
+                if adjustedAngle in [11, 12, 13, 14]:
+                    self.image = pygame.transform.flip(self.image, True, False)
+
+    def flipDiagonalImage(self):
+        adjustedAngle = (self.playerBody.currentAngle % 360) // 22.5
+        if self.playerBody.swingingDirection == Directions.CLOCKWISE:
+            if adjustedAngle in [1, 2, 5, 6, 9, 10]:
+                self.image = pygame.transform.flip(self.image, True, False)
+            if adjustedAngle in [1, 2, 9, 10, 13, 14]:
                 self.image = pygame.transform.flip(self.image, False, True)
+            if adjustedAngle in [9, 10]:
+                self.image = pygame.transform.rotate(self.image, 90)
+            if adjustedAngle in [1, 2]:
+                self.image = pygame.transform.rotate(self.image, 270)
+        else:
+            if adjustedAngle in [5, 6, 9, 10, 13, 14]:
+                self.image = pygame.transform.flip(self.image, True, False)
+            if adjustedAngle in [9, 10]:
+                self.image = pygame.transform.flip(self.image, False, True)
+            if adjustedAngle in [13, 14]:
+                self.image = pygame.transform.rotate(self.image, 90)
+            if adjustedAngle in [5, 6]:
+                self.image = pygame.transform.rotate(self.image, 270)
 
     def update(self):
         if self.playerBody.playerState in [PlayerStates.BALL, PlayerStates.FALLING, PlayerStates.EXPLODING,
@@ -782,13 +727,11 @@ class PlayerArmSprite(pygame.sprite.Sprite):
             self.setCoordinates(self.playerBody.coordinates[0], self.playerBody.coordinates[1])
             self.checkGrabPost()
             self.image = self.playerBody.imageDict["arm"][0]
-        elif self.armState == ArmStates.SWINGING and not self.playerBody.isFrozen:
-            self.swingFrameCount += 1
-            self.swingFrameCount %= 85
+            self.rotateImage()
+        elif self.armState == ArmStates.SWINGING:
             self.swing()
         if self.armState == ArmStates.OFF_SCREEN:
             self.image = self.emptyImage
-        self.rotateImage()
         self.image.set_colorkey(BLACK)
 
     def extendArm(self, direction):
@@ -815,95 +758,86 @@ class PlayerArmSprite(pygame.sprite.Sprite):
                 self.setSwingDirection()
                 offsets = (self.collisionRect[0] % 48 - 34, self.collisionRect[1] % 48 - 36)
                 self.offsetCoordinates(offsets[0], offsets[1])
-                if self.swingingDirections[1] == Directions.CLOCKWISE:
-                    if self.extendedDirection == Directions.RIGHT:
-                        self.playerBody.setCoordinates(self.playerBody.coordinates[0] - offsets[0],
-                                                       self.playerBody.coordinates[1] - offsets[1] - 4)
-                    elif self.extendedDirection == Directions.DOWN:
-                        self.playerBody.setCoordinates(self.playerBody.coordinates[0] - offsets[0] + 2,
-                                                       self.playerBody.coordinates[1] - offsets[1])
-                    elif self.extendedDirection == Directions.LEFT:
-                        self.playerBody.setCoordinates(self.playerBody.coordinates[0] - offsets[0],
-                                                       self.playerBody.coordinates[1] - offsets[1] + 4)
-                    else:
-                        self.playerBody.setCoordinates(self.playerBody.coordinates[0] - offsets[0] - 2,
-                                                       self.playerBody.coordinates[1] - offsets[1])
+                if self.extendedDirection == Directions.LEFT:
+                    self.playerBody.currentAngle = 0
+                    self.currentAngleOctant = 0
+                elif self.extendedDirection == Directions.UP:
+                    self.playerBody.currentAngle = 90
+                    self.currentAngleOctant = 2
+                elif self.extendedDirection == Directions.RIGHT:
+                    self.playerBody.currentAngle = 180
+                    self.currentAngleOctant = 4
                 else:
-                    if self.swingingDirections[0] == Directions.RIGHT:
-                        pass
-                        self.playerBody.setCoordinates(self.playerBody.coordinates[0] - offsets[0] - 2,
-                                                       self.playerBody.coordinates[1] - offsets[1])
-                    elif self.swingingDirections[0] == Directions.DOWN:
-                        self.playerBody.setCoordinates(self.playerBody.coordinates[0] - offsets[0] - 2,
-                                                       self.playerBody.coordinates[1] - offsets[1])
-                    if self.swingingDirections[0] == Directions.LEFT:
-                        self.playerBody.setCoordinates(self.playerBody.coordinates[0] - offsets[0],
-                                                       self.playerBody.coordinates[1] - offsets[1] - 2)
-                    else:
-                        self.playerBody.setCoordinates(self.playerBody.coordinates[0] - offsets[0] + 2,
-                                                       self.playerBody.coordinates[1] - offsets[1])
+                    self.playerBody.currentAngle = 270
+                    self.currentAngleOctant = 6
+                self.playerBody.swingingArmCoordinates = self.collisionRect.center
 
-                if (self.swingingDirections[0] in [Directions.UP, Directions.DOWN]) == \
-                        (self.swingingDirections[1] == Directions.CLOCKWISE):
-                    self.swingFrameCount = self.playerBody.swingFrameCount = 0
-                else:
-                    self.swingFrameCount = self.playerBody.swingFrameCount = 65
+    def changeDirection(self):
+        if self.extendedDirection == Directions.UP:
+            self.extendedDirection = Directions.DOWN
+        elif self.extendedDirection == Directions.DOWN:
+            self.extendedDirection = Directions.UP
+        elif self.extendedDirection == Directions.LEFT:
+            self.extendedDirection = Directions.RIGHT
+        elif self.extendedDirection == Directions.RIGHT:
+            self.extendedDirection = Directions.LEFT
 
     def setSwingDirection(self):
         if any(((self.extendedDirection == Directions.UP and self.playerBody.facingDirection == Directions.LEFT),
                 (self.extendedDirection == Directions.DOWN and self.playerBody.facingDirection == Directions.RIGHT),
                 (self.extendedDirection == Directions.RIGHT and self.playerBody.facingDirection == Directions.UP),
                 (self.extendedDirection == Directions.LEFT and self.playerBody.facingDirection == Directions.DOWN))):
-            directionValue = Directions.CLOCKWISE
+            self.playerBody.swingingDirection = Directions.CLOCKWISE
         else:
-            directionValue = Directions.COUNTER
-        self.swingingDirections = [self.extendedDirection, directionValue]
-        self.playerBody.swingingDirections = [self.extendedDirection, directionValue]
+            self.playerBody.swingingDirection = Directions.COUNTER
+
+    def changeSwingDirection(self):
+        if 29 < self.playerBody.currentAngle < 120:
+            self.extendedDirection = Directions.UP
+        elif 119 < self.playerBody.currentAngle < 210:
+            self.extendedDirection = Directions.RIGHT
+        elif 209 < self.playerBody.currentAngle < 300:
+            self.extendedDirection = Directions.DOWN
+        else:
+            self.extendedDirection = Directions.LEFT
+        self.rotateImage()
 
     def swing(self):
         if self.playerBody.playerState == PlayerStates.MOVING:
             self.armState = ArmStates.OFF_SCREEN
             return
-        currentDirectionIndex = self.directionList.index(self.extendedDirection)
-        if any(self.swingFrameCount % 85 == self.playerBody.keyFrames[n] for n in range(0, 7, 2)):
-            if self.swingingDirections[1] == Directions.CLOCKWISE:
-                self.extendedDirection = self.directionList[currentDirectionIndex - 1]
-            else:
-                self.extendedDirection = self.directionList[(currentDirectionIndex + 1) % 4]
-        if self.playerBody.getOrthogonalTurnState():
+        if self.playerBody.isTurningOrthogonally():
             self.image = self.playerBody.imageDict["arm"][0]
+            self.changeSwingDirection()
         else:
-            if self.extendedDirection in [Directions.UP, Directions.DOWN]:
+            adjustedAngle = (self.playerBody.currentAngle % 360) // 22.5
+            if (adjustedAngle in [1, 2, 9, 10]) == (self.playerBody.swingingDirection == Directions.CLOCKWISE):
                 self.image = self.playerBody.imageDict["arm"][1]
-                if self.extendedDirection == Directions.DOWN:
-                    self.image = pygame.transform.flip(self.image, True, True)
             else:
                 self.image = self.playerBody.imageDict["arm"][2]
-            self.flipImage()
-        self.flipSwingingImage()
+            self.flipDiagonalImage()
         self.adjustPosition()
-        if self.swingFrameCount % 85 == 0:
-            self.swingFrameCount = 0
 
     def adjustPosition(self):
-        if self.swingingDirections[1] == Directions.CLOCKWISE:
-            if self.swingingDirections[0] in [Directions.DOWN, Directions.RIGHT]:
-                horizontalOffsets = [2, 0, 0, -2, 0, -2, 0, 2]
-                verticalOffsets = [4, -2, 2, 0, -2, 0, -2, 0]
-            else:
-                horizontalOffsets = [0, -2, 0, 2, 2, 0, 0, -2]
-                verticalOffsets = [0, -2, -2, 0, 4, -2, 2, 0]
+        offsets = self.swingingCoordinates
+        if self.playerBody.swingingDirection == Directions.CLOCKWISE:
+            horizontalOffsets = [2, 0, 0, -2, -2, 0, 2, 2]
+            verticalOffsets = [4, 4, 2, 2, 0, 0, 4, 2]
+            if (self.currentAngleOctant * 45 + 22.5) < self.playerBody.currentAngle <\
+                    (self.currentAngleOctant * 45 + 45):
+                offsets = (offsets[0] + horizontalOffsets[self.currentAngleOctant],
+                           offsets[1] + verticalOffsets[self.currentAngleOctant])
+                self.currentAngleOctant = (self.currentAngleOctant + 1) % 8
+                self.coordinates = (offsets[0], offsets[1])
         else:
-            if self.swingingDirections[0] in [Directions.DOWN, Directions.RIGHT]:
-                horizontalOffsets = [0, 2, 2, 0, 0, -2, 0, -2]
-                verticalOffsets = [2, 0, -2, 0, -2, 0, 4, -2]
-            else:
-                horizontalOffsets = [0, -2, 0, -2, 0, 2, 2, 0]
-                verticalOffsets = [-2, 0, 4, -2, 2, 0, -2, 0]
-        if self.swingFrameCount in self.playerBody.keyFrames:
-            currentFrameCountIndex = self.playerBody.keyFrames.index(self.swingFrameCount)
-            self.coordinates = (self.coordinates[0] + horizontalOffsets[currentFrameCountIndex],
-                                self.coordinates[1] + verticalOffsets[currentFrameCountIndex])
+            horizontalOffsets = [2, 2, 2, 0, -2, -2, 0, 0]
+            verticalOffsets = [0, 2, 2, 4, 4, 2, 4, 0]
+            if ((self.currentAngleOctant - 1) * 45) % 360 < self.playerBody.currentAngle <\
+                    ((self.currentAngleOctant - 1) * 45 % 360 + 22.5):
+                offsets = (offsets[0] + horizontalOffsets[self.currentAngleOctant],
+                           offsets[1] + verticalOffsets[self.currentAngleOctant])
+                self.currentAngleOctant = (self.currentAngleOctant - 1) % 8
+                self.coordinates = (offsets[0], offsets[1])
 
 
 class SonicWaveSprite(pygame.sprite.Sprite):
@@ -981,7 +915,7 @@ class BlackHoleSprite(pygame.sprite.Sprite):
     initialEnemies = 0
     blackHoleToSpawnList = []
     blackHoleToSpawn = None
-    spawnedInitialEnemies = onCooldown = isFrozen = False
+    spawnedInitialEnemies = onCooldown = False
 
     def __init__(self):
         super().__init__(blackHoleGroup)
@@ -999,7 +933,7 @@ class BlackHoleSprite(pygame.sprite.Sprite):
         self.setCoordinates(x, y)
         BlackHoleSprite.blackHoleToSpawnList.append(self)
         BlackHoleSprite.initialEnemies = 0
-        BlackHoleSprite.spawnedInitialEnemies = BlackHoleSprite.onCooldown = BlackHoleSprite.isFrozen = False
+        BlackHoleSprite.spawnedInitialEnemies = BlackHoleSprite.onCooldown = False
         if BlackHoleSprite.blackHoleToSpawn is None:
             BlackHoleSprite.blackHoleToSpawn = BlackHoleSprite.blackHoleToSpawnList[0]
 
@@ -1033,7 +967,6 @@ class BlackHoleSprite(pygame.sprite.Sprite):
             newUrchin = UrchinSprite()
             newUrchin.setCoordinates(self.coordinates[0], self.coordinates[1])
             newUrchin.setRandomDirection()
-            newUrchin.isFrozen = self.isFrozen
             self.frameCount = 0
             BlackHoleSprite.onCooldown = True
             if not BlackHoleSprite.spawnedInitialEnemies:
@@ -1052,6 +985,7 @@ class BlackHoleSprite(pygame.sprite.Sprite):
 
 class UrchinSprite(pygame.sprite.Sprite):
     movementSpeed = 2
+    isFrozen = False
 
     def __init__(self):
         super().__init__(enemyGroup)
@@ -1060,7 +994,7 @@ class UrchinSprite(pygame.sprite.Sprite):
         self.enemyState = EnemyState.SMALL_BALL
         self.color = BLUE
         self.facingDirection = Directions.RIGHT
-        self.bouncingOff = self.isFrozen = self.running = False
+        self.bouncingOff = self.running = False
         self.animationCount = self.frameCount = self.delayCount = 0
 
         self.imageDict = {BLUE: {}, YELLOW: {}}
@@ -1148,7 +1082,7 @@ class UrchinSprite(pygame.sprite.Sprite):
                     self.running = False
                     self.getRandomMoveAction()
                 self.animateMovement()
-                if self.frameCount % 2 == 0 and not self.isFrozen:
+                if self.frameCount % 2 == 0 and not UrchinSprite.isFrozen:
                     self.moveSprite()
                 if self.frameCount % 80 == 0:
                     self.frameCount = 0
@@ -1158,7 +1092,7 @@ class UrchinSprite(pygame.sprite.Sprite):
                 self.animationCount = 8
         elif self.enemyState == EnemyState.WAITING:
             self.animateMovement()
-            if not self.isFrozen:
+            if not UrchinSprite.isFrozen:
                 self.moveSprite()
         elif self.enemyState == EnemyState.EXPLODING:
             if self.frameCount % 30 > 24:
@@ -1191,7 +1125,7 @@ class UrchinSprite(pygame.sprite.Sprite):
             self.frameCount = 0
             self.delayCount = random.randint(0, 5)
             self.enemyState = EnemyState.WAITING
-        elif randomValue < 10 and not self.isFrozen:
+        elif randomValue < 10 and not UrchinSprite.isFrozen:
             self.setRandomDirection()
         elif randomValue > 38:
             self.running = True
@@ -1308,7 +1242,7 @@ class UrchinSprite(pygame.sprite.Sprite):
                 else:
                     self.rect.left = pushingPlayer.rect.right
                 print(self.rect, pushingPlayer.rect)
-            self.moveSprite(PlayerSprite.movementSpeed)
+            self.moveSprite(math.floor(PlayerSprite.movementSpeed))
 
     def offsetPointsSpriteCoordinates(self, offsetDirection):
         if offsetDirection == Directions.UP:
@@ -1697,10 +1631,7 @@ class ItemClock(Item):
         self.frameCount += 1
         if self.frameCount == 1:
             PlayerSprite.currentLevel.image = PlayerSprite.currentLevel.lightImage
-            for sprite in enemyGroup:
-                sprite.isFrozen = True
-            for sprite in blackHoleGroup:
-                sprite.isFrozen = True
+            UrchinSprite.isFrozen = True
             for sprite in playerGroup:
                 if sprite is not self.collectingPlayer:
                     sprite.isFrozen = True
@@ -1713,10 +1644,7 @@ class ItemClock(Item):
             self.image = self.imageDict["empty"]
         if self.frameCount == 513:
             PlayerSprite.currentLevel.image = PlayerSprite.currentLevel.standardImage
-            for sprite in enemyGroup:
-                sprite.isFrozen = False
-            for sprite in blackHoleGroup:
-                sprite.isFrozen = False
+            UrchinSprite.isFrozen = False
             for sprite in playerGroup:
                 if sprite is not self.collectingPlayer:
                     sprite.isFrozen = False

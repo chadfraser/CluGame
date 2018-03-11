@@ -1,5 +1,6 @@
 import pygame
-from CluSprites import SpriteSheet, playSound, Directions
+from CluSprites import SpriteSheet, Directions
+from CluGlobals import playSound
 
 
 BLACK = (0, 0, 0)
@@ -7,7 +8,6 @@ demoGroup = pygame.sprite.Group()
 
 
 class DemoSprite(pygame.sprite.Sprite):
-
     def __init__(self, coordinates=(0, 0)):
         super().__init__(demoGroup)
         self.spriteSheet = SpriteSheet("demo.png")
@@ -132,18 +132,16 @@ class DemoPlayerSprite(DemoSprite):
                 else:
                     self.image = self.animationFrames[5]
 
-        if self.clockwise:
-            if self.swingFrameCount == 6:
+        if self.swingFrameCount == 6:
+            if self.clockwise:
                 DemoPlayerSprite.facingDirection = Directions.DOWN
-            elif self.swingFrameCount == 24:
-                DemoPlayerSprite.facingDirection = Directions.LEFT
-        else:
-            if self.swingFrameCount == 6:
+            else:
                 DemoPlayerSprite.facingDirection = Directions.UP
-            elif self.swingFrameCount == 24 or self.swingFrameCount == 45:
-                DemoPlayerSprite.facingDirection = Directions.LEFT
-            elif self.swingFrameCount == 63:
-                DemoPlayerSprite.facingDirection = Directions.RIGHT
+        elif self.swingFrameCount == 24 or self.swingFrameCount == 45:
+            DemoPlayerSprite.facingDirection = Directions.LEFT
+        elif self.swingFrameCount == 63:
+            DemoPlayerSprite.facingDirection = Directions.RIGHT
+
         if self.frameCount == 112 or self.frameCount == 176:
             self.coordinates = (self.coordinates[0], self.coordinates[1] - 4)
         elif self.frameCount == 129 or self.frameCount == 193:
@@ -181,7 +179,7 @@ class DemoPlayerSprite(DemoSprite):
 
     def playerThreeUpdate(self):
         if self.animated:
-            if self.frameCount == 7:
+            if self.frameCount == 9:
                 playSound("death.wav")
                 DemoPlayerSprite.paused = True
                 self.image = self.animationFrames[5]
@@ -221,171 +219,6 @@ class DemoPlayerSprite(DemoSprite):
 
     def setCoordinates(self):
         self.rect.topleft = self.coordinates
-
-
-class DemoGoldSprite(DemoSprite):
-    def __init__(self, coordinates=(0, 0)):
-        super().__init__(coordinates)
-        self.animationFrames = self.spriteSheet.getStripImages(0, 32, 68, 68, 10)
-        self.animationPosition = 0
-        self.timesFlipped = 0
-        self.flipping = False
-        self.rect = self.image.get_rect()
-
-    def update(self):
-        self.frameCount += 1
-        if self.flipping and 9 < self.frameCount:
-            self.flipUp()
-        elif self.timesFlipped:
-            if self.frameCount % 12 < 6:
-                self.image = self.animationFrames[3]
-            else:
-                self.image = self.animationFrames[8]
-        for sprite in demoGroup:
-            if isinstance(sprite, DemoPlayerSprite) and self.rect.colliderect(sprite.rect) and\
-                    0 < self.frameCount and not self.flipping:
-                playSound("pass_over_gold.wav")
-                self.flipping = True
-                self.frameCount = 9 * self.timesFlipped
-
-    def flipUp(self):
-        if self.timesFlipped == 0:
-            if self.frameCount % 3 == 0:
-                if self.animationPosition == 7:
-                    self.animationPosition = 0
-                else:
-                    self.animationPosition += 1
-        else:
-            if self.frameCount % 3 == 0:
-                if self.animationPosition == 0:
-                    self.animationPosition = 7
-                else:
-                    self.animationPosition -= 1
-        self.image = self.animationFrames[self.animationPosition]
-        if self.frameCount == 36:
-            self.timesFlipped += 1
-            self.frameCount = 0
-            self.flipping = False
-
-    def setMonochromeImage(self):
-        self.image = self.animationFrames[9]
-
-
-class DemoWallSprite(DemoSprite):
-    def __init__(self, demoNumber=0, coordinates=(0, 0)):
-        super().__init__(coordinates)
-        self.animationFrames = self.spriteSheet.getStripImages(680, 0, 255, 564)
-        self.demoNumber = demoNumber
-        self.image = self.animationFrames[0]
-        if demoNumber == 2:
-            self.image = self.animationFrames[1]
-        self.rect = self.image.get_rect()
-
-    def update(self):
-        self.frameCount += 1
-        if self.demoNumber == 2:
-            self.image = self.animationFrames[1]
-            self.image = pygame.transform.flip(self.image, True, False)
-
-        for sprite in demoGroup:
-            if isinstance(sprite, DemoPlayerSprite) and self.rect.colliderect(sprite.rect) and 0 < self.frameCount\
-                    and not DemoPlayerSprite.paused:
-                playSound("bounce_wall.wav")
-                DemoPlayerSprite.paused = True
-                self.frameCount = -100
-                sprite.frameCount = 0
-            elif isinstance(sprite, DemoUrchinSprite) and self.rect.collidepoint(sprite.rect.center) and\
-                    sprite.animationCount == 2:
-                playSound("crush_enemy.wav")
-                sprite.animationCount = 3
-                sprite.frameCount = 0
-
-
-class DemoUrchinSprite(DemoSprite):
-    def __init__(self, coordinates=(0, 0)):
-        super().__init__(coordinates)
-        self.animationFrames = self.spriteSheet.getStripImages(136, 168, 68, 68, 7)
-        self.animationCount = 0
-        self.image = self.animationFrames[0]
-        self.rect = self.image.get_rect()
-
-    def update(self):
-        self.frameCount += 1
-        if self.animationCount == 0:
-            if self.frameCount % 8 < 5:
-                self.image = self.animationFrames[0]
-            else:
-                self.image = self.animationFrames[1]
-        elif self.animationCount == 1:
-            if self.frameCount < 3:
-                self.image = self.animationFrames[2]
-            elif self.frameCount % 8 < 5:
-                self.image = self.animationFrames[3]
-            else:
-                self.image = self.animationFrames[4]
-        elif self.animationCount == 2:
-            if self.frameCount > 3:
-                self.coordinates = (self.coordinates[0] - 4, self.coordinates[1])
-        else:
-            if self.frameCount < 5:
-                self.image = self.animationFrames[5]
-            elif self.frameCount < 10:
-                self.image = self.animationFrames[6]
-            else:
-                self.kill()
-        for sprite in demoGroup:
-            if isinstance(sprite, DemoWaveSprite) and self.rect.collidepoint(sprite.rect.center) and\
-                    0 < self.frameCount:
-                playSound("push_or_shoot_enemy.wav")
-                self.animationCount = 1
-                self.frameCount = 0
-            elif isinstance(sprite, DemoPlayerSprite) and self.rect.colliderect(sprite.rect) and\
-                    self.animationCount == 1:
-                self.animationCount = 2
-                self.frameCount = 0
-
-
-class DemoHoleSprite(DemoSprite):
-    def __init__(self, coordinates=(0, 0)):
-        super().__init__(coordinates)
-        self.animationFrames = self.spriteSheet.getStripImages(0, 100, 68, 68, 5)
-        self.animationCount = 0
-        self.image = self.animationFrames[0]
-        self.rect = self.image.get_rect()
-
-    def update(self):
-        self.frameCount += 1
-        if self.frameCount % 6 == 0:
-            self.animationCount += 1
-            if self.animationCount == 4:
-                self.animationCount = 0
-            self.image = self.animationFrames[self.animationCount]
-
-        for sprite in demoGroup:
-            if isinstance(sprite, DemoPlayerSprite) and self.rect.collidepoint(sprite.rect.center) and\
-                            self.frameCount and not sprite.animated:
-                sprite.animated = True
-                sprite.frameCount = 0
-
-    def setMonochromeImage(self):
-        self.image = self.animationFrames[4]
-
-
-class DemoWaveSprite(DemoSprite):
-    def __init__(self, coordinates=(0, 0)):
-        super().__init__(coordinates)
-        self.animationFrames = self.spriteSheet.getStripImages(0, 168, 68, 68, 2)
-        self.rect = self.image.get_rect()
-
-    def update(self):
-        self.frameCount += 1
-        if self.frameCount == 28:
-            playSound("shoot_wave.wav")
-        if 28 < self.frameCount:
-            self.coordinates = (self.coordinates[0] - 8, self.coordinates[1])
-            self.image = self.animationFrames[0]
-            if self.frameCount % 2 == 0:
-                self.image = self.animationFrames[1]
 
 
 class DemoArmSprite(DemoSprite):
@@ -467,6 +300,141 @@ class DemoArmSprite(DemoSprite):
             self.extendedDirection = Directions.RIGHT
 
 
+class DemoGoldSprite(DemoSprite):
+    def __init__(self, coordinates=(0, 0)):
+        super().__init__(coordinates)
+        self.animationFrames = self.spriteSheet.getStripImages(0, 32, 68, 68, 10)
+        self.animationPosition = 0
+        self.timesFlipped = 0
+        self.flipping = False
+        self.rect = self.image.get_rect()
+
+    def update(self):
+        self.frameCount += 1
+        if self.flipping and 9 < self.frameCount:
+            self.flipUp()
+        elif self.timesFlipped:
+            if self.frameCount % 12 < 6:
+                self.image = self.animationFrames[3]
+            else:
+                self.image = self.animationFrames[8]
+        for sprite in demoGroup:
+            if isinstance(sprite, DemoPlayerSprite) and self.rect.colliderect(sprite.rect) and\
+                    0 < self.frameCount and not self.flipping:
+                playSound("pass_over_gold.wav")
+                self.flipping = True
+                self.frameCount = 9 * self.timesFlipped
+
+    def flipUp(self):
+        if self.timesFlipped == 0:
+            if self.frameCount % 3 == 0:
+                if self.animationPosition == 7:
+                    self.animationPosition = 0
+                else:
+                    self.animationPosition += 1
+        else:
+            if self.frameCount % 3 == 0:
+                if self.animationPosition == 0:
+                    self.animationPosition = 7
+                else:
+                    self.animationPosition -= 1
+        self.image = self.animationFrames[self.animationPosition]
+        if self.frameCount == 36:
+            self.timesFlipped += 1
+            self.frameCount = 0
+            self.flipping = False
+
+    def setMonochromeImage(self):
+        self.image = self.animationFrames[9]
+
+
+class DemoHoleSprite(DemoSprite):
+    def __init__(self, coordinates=(0, 0)):
+        super().__init__(coordinates)
+        self.animationFrames = self.spriteSheet.getStripImages(0, 100, 68, 68, 5)
+        self.animationCount = 0
+        self.image = self.animationFrames[0]
+        self.rect = self.image.get_rect()
+
+    def update(self):
+        self.frameCount += 1
+        if self.frameCount % 6 == 0:
+            self.animationCount += 1
+            if self.animationCount == 4:
+                self.animationCount = 0
+            self.image = self.animationFrames[self.animationCount]
+
+        for sprite in demoGroup:
+            if isinstance(sprite, DemoPlayerSprite) and self.rect.collidepoint(sprite.rect.center) and\
+                            self.frameCount and not sprite.animated:
+                sprite.animated = True
+                sprite.frameCount = 0
+
+    def setMonochromeImage(self):
+        self.image = self.animationFrames[4]
+
+
+class DemoUrchinSprite(DemoSprite):
+    def __init__(self, coordinates=(0, 0)):
+        super().__init__(coordinates)
+        self.animationFrames = self.spriteSheet.getStripImages(136, 168, 68, 68, 7)
+        self.animationCount = 0
+        self.image = self.animationFrames[0]
+        self.rect = self.image.get_rect()
+
+    def update(self):
+        self.frameCount += 1
+        if self.animationCount == 0:
+            if self.frameCount % 8 < 5:
+                self.image = self.animationFrames[0]
+            else:
+                self.image = self.animationFrames[1]
+        elif self.animationCount == 1:
+            if self.frameCount < 3:
+                self.image = self.animationFrames[2]
+            elif self.frameCount % 8 < 5:
+                self.image = self.animationFrames[3]
+            else:
+                self.image = self.animationFrames[4]
+        elif self.animationCount == 2:
+            if self.frameCount > 3:
+                self.coordinates = (self.coordinates[0] - 4, self.coordinates[1])
+        else:
+            if self.frameCount < 5:
+                self.image = self.animationFrames[5]
+            elif self.frameCount < 10:
+                self.image = self.animationFrames[6]
+            else:
+                self.kill()
+        for sprite in demoGroup:
+            if isinstance(sprite, DemoWaveSprite) and self.rect.collidepoint(sprite.rect.center) and\
+                    0 < self.frameCount:
+                playSound("push_or_shoot_enemy.wav")
+                self.animationCount = 1
+                self.frameCount = 0
+            elif isinstance(sprite, DemoPlayerSprite) and self.rect.colliderect(sprite.rect) and\
+                    self.animationCount == 1:
+                self.animationCount = 2
+                self.frameCount = 0
+
+
+class DemoWaveSprite(DemoSprite):
+    def __init__(self, coordinates=(0, 0)):
+        super().__init__(coordinates)
+        self.animationFrames = self.spriteSheet.getStripImages(0, 168, 68, 68, 2)
+        self.rect = self.image.get_rect()
+
+    def update(self):
+        self.frameCount += 1
+        if self.frameCount == 28:
+            playSound("shoot_wave.wav")
+        if 28 < self.frameCount:
+            self.coordinates = (self.coordinates[0] - 8, self.coordinates[1])
+            self.image = self.animationFrames[0]
+            if self.frameCount % 2 == 0:
+                self.image = self.animationFrames[1]
+
+
 class DemoRubberTrapSprite(DemoSprite):
     def __init__(self, demoNumber=0, coordinates=(0, 0)):
         super().__init__(coordinates)
@@ -507,10 +475,40 @@ class DemoRubberTrapSprite(DemoSprite):
                 sprite.animated = True
 
     def setMonochromeImage(self):
-        if self.demoNumber == 0:
-            self.image = self.animationFrames[4]
-        else:
+        self.image = self.animationFrames[4]
+        if self.demoNumber == 1:
             self.image = self.animationFrames[5]
+            self.image = pygame.transform.flip(self.image, True, False)
+
+
+class DemoWallSprite(DemoSprite):
+    def __init__(self, demoNumber=0, coordinates=(0, 0)):
+        super().__init__(coordinates)
+        self.animationFrames = self.spriteSheet.getStripImages(680, 0, 255, 564)
+        self.demoNumber = demoNumber
+        self.image = self.animationFrames[0]
+        if demoNumber == 2:
+            self.image = self.animationFrames[1]
+        self.rect = self.image.get_rect()
+
+    def update(self):
+        self.frameCount += 1
+        if self.demoNumber == 2:
+            self.image = self.animationFrames[1]
+            self.image = pygame.transform.flip(self.image, True, False)
+
+        for sprite in demoGroup:
+            if isinstance(sprite, DemoPlayerSprite) and self.rect.colliderect(sprite.rect) and 0 < self.frameCount\
+                    and not DemoPlayerSprite.paused:
+                playSound("bounce_wall.wav")
+                DemoPlayerSprite.paused = True
+                self.frameCount = -100
+                sprite.frameCount = 0
+            elif isinstance(sprite, DemoUrchinSprite) and self.rect.collidepoint(sprite.rect.center) and\
+                    sprite.animationCount == 2:
+                playSound("crush_enemy.wav")
+                sprite.animationCount = 3
+                sprite.frameCount = 0
 
 
 class DemoDisplay(pygame.sprite.Sprite):

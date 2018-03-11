@@ -417,7 +417,7 @@ def playLevel(playerList, playerArmList, level, levelCount):
                         for sprite in group:
                             SCREEN.blit(sprite.image, (math.floor(sprite.coordinates[0]),
                                                        math.floor(sprite.coordinates[1])))
-                    if frameCount % 5 == 0:
+                    if frameCount % 5 == 0 and not CluSprites.UrchinSprite.isFrozen:
                         timeCount = max(0, timeCount - 1)
                     if timeCount > 200 and playingLowTimeMusic:
                         playingLowTimeMusic = False
@@ -583,7 +583,8 @@ def setTextCoordinates(value, numberOfPlayers):
 def displayChangeControlMenu(subtitleImage, titleImageOne, titleImageTwo, numberOfPlayers):
     for sprite in [subtitleImage, titleImageOne, titleImageTwo]:
         sprite.setTitleImage()
-    frameCount = controlChangeIndex = currentPlayerIndex = 0
+    frameCount = controlChangeIndex = 0
+    currentPlayerIndex = 1
     if numberOfPlayers == 1:
         textCoordinates = (90, 345)
     else:
@@ -629,8 +630,9 @@ def displayChangeControlMenu(subtitleImage, titleImageOne, titleImageTwo, number
         CLOCK.tick(FPS)
 
 
-def changeControlInput(controlChangeIndex, event, currentIndex, numberOfPlayers):
+def changeControlInput(controlChangeIndex, event, currentPlayerIndex, numberOfPlayers):
     controlsList = ["shoot", "pause", "up", "down", "left", "right", "none"]
+    currentIndex = currentPlayerIndex - 1
     if controlChangeIndex == 0 and currentIndex == 0:
         for listIndex, controls in enumerate(controlsDicts):
             if numberOfPlayers <= listIndex:
