@@ -57,6 +57,11 @@ class BlackHoleSprite(pg.sprite.Sprite):
         self.image.set_colorkey(c.BLACK)
         self.rect = self.image.get_rect()
 
+    @classmethod
+    def reset(cls):
+        cls.blackHolesList = []
+        cls.blackHoleToSpawn = None
+
     def initialize(self, x, y):
         """Reset some of the class' attributes to its proper initial values.
 

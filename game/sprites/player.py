@@ -132,6 +132,8 @@ class PlayerSprite(pg.sprite.Sprite):
         self.killedUrchinCount = self.goldCollectedCount = 0
         if not self.playerState == c.PlayerStates.DEAD:
             self.putSpriteInBall()
+        else:
+            self.image = self.emptyImage
 
     def setCoordinates(self, x, y):
         """Set the sprite's coordinates to the passed arguments.
@@ -259,7 +261,7 @@ class PlayerSprite(pg.sprite.Sprite):
 
             self.moveSprite()
             self.animateMovement()
-            if self.frameCount % 16 == 0 and not self.isFrozen:
+            if self.frameCount % 10 == 0 and not self.isFrozen:
                 self.frameCount = 0
                 self.playerState = c.PlayerStates.MOVING
         elif self.playerState == c.PlayerStates.SWINGING:
@@ -531,14 +533,13 @@ class PlayerSprite(pg.sprite.Sprite):
         return currentAngleSixteenth in [0, 3, 4, 7, 8, 11, 12, 15]
 
     def rotateImageAroundPoint(self):
-        """Rotate the sprite around is swingingArmCoordinates.
+        """Rotate the sprite around its swingingArmCoordinates.
 
-        The sprite's rect's new center point is first calculated based on its current angle, current center
-        point, and swingingArmCoordinates.
+        The sprite's rect's new center point is first calculated based on its current angle and on its
+        swingingArmCoordinates, with a constant radius of 23.
         That rect is then used to set the coordinates of the sprite and its collisionRect.
         """
-        radius = math.sqrt((self.rect.center[0] - self.swingingArmCoordinates[0])**2
-                           + (self.rect.center[1] - self.swingingArmCoordinates[1])**2)
+        radius = 23
         radianAngle = math.radians(self.currentAngle)
         horizontalValue = self.swingingArmCoordinates[0] + radius * math.cos(radianAngle)
         verticalValue = self.swingingArmCoordinates[1] + radius * math.sin(radianAngle)
@@ -685,15 +686,16 @@ class PlayerSprite(pg.sprite.Sprite):
                 self.setCoordinates(self.coordinates[0] + (48 - self.coordinates[0] % 48), self.coordinates[1])
 
     def animateLevelEnd(self):
-        """Change the sprite's image. To be added to."""  #######################################
-        if self.playerNumber == 1:
-            self.setCoordinates(88, 80)
-            if self.frameCount in (32, 160, 192):
-                self.image = self.imageDict["end"][1]
-            else:
-                self.image = self.imageDict["end"][0]
-                if self.frameCount % 32 > 15:
-                    self.flipImage()
-                if self.frameCount % 16 == 0:
-                    playSound("grab_post_move_end.wav")
-            # REMEMBER TO COUNT DOWN TIME
+        """Change the sprite's image to the end-of-level image, and flip it every 16 frames."""
+        self.facingDirection = c.Directions.LEFT
+        self.image = self.imageDict["end"][0]
+        if (self.frameCount - 1) % 32 > 15:
+            self.flipImage()
+        if self.frameCount % 16 == 1 and self.playerNumber == 1:
+            # Only player one makes noise during the level end, to prevent overlapping sound effects
+
+            playSound("grab_post_move_end.wav")
+
+    def setLevelEndCountImage(self):
+        """Set the sprite's image to look towards the score box as the score counts up."""
+        self.image = self.imageDict["end"][1]

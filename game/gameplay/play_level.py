@@ -1,9 +1,9 @@
 import pygame as pg
 import sys
 
-from game.gameplay.draw_level import blitLevelData
+from game.gameplay.draw_level import blitLevelData, blitLevelEndData, scrollLevelData
 from game.gameplay.player_actions import shootWave
-from game.gameplay.setup_level import setLevelSprites, setLevelTime
+from game.gameplay.setup_level import setLevelConstants, setLevelSprites, setLevelTime
 from game.gameplay.state import checkPauseGame, checkQuitGame
 from game.sprites.gold import GoldSprite
 from game.sprites.player import PlayerSprite
@@ -28,8 +28,9 @@ def playLevel(playerList, playerArmList, level, levelCount, gameOverTextStates, 
         highScore: An integer showing the current high score.
     """
 
-    levelCount += 1
-    setLevelSprites(level, levelCount)
+    PlayerSprite.currentLevel = level
+    setLevelSprites(level)
+    setLevelConstants(levelCount)
     timeCount = setLevelTime(level, levelCount)
     targetTimeCount = timeCount - 300
     pausedPlayerNumber = frameCount = 0
@@ -39,12 +40,13 @@ def playLevel(playerList, playerArmList, level, levelCount, gameOverTextStates, 
     # playingLowTime music tracks if the music being played is the 'low time' music. If the timer increases above 200
     # while it's playing the 'low time' music, it loads and plays the standard music instead.
     # timeReachedZero tracks if the timer has already reached 0, so it only kills all players once at that point.
+    # gameOverStarted tracks if the code to intialize a game over has begun. Initializing a game over takes
 
     scoreBonus = True
-    playingLowTimeMusic = timeReachedZero = False
+    playingLowTimeMusic = timeReachedZero = gameOverStarted = False
     c.SCREEN.fill(level.backgroundColor)
     goldCount = len(c.goldGroup)
-    blitLevelData(playerList, level, goldCount, timeCount, levelCount, highScore)
+    blitLevelData(playerList, level, goldCount, timeCount)
     pg.display.update()
     pg.mixer.music.load(c.LEVEL_START_MUSIC)
     pg.mixer.music.play()
@@ -61,7 +63,6 @@ def playLevel(playerList, playerArmList, level, levelCount, gameOverTextStates, 
     pg.mixer.music.play(-1)
     for num, player in enumerate(playerList):
         player.initialize(48 * level.playerStartPosition[num][0], 49 + 48 * level.playerStartPosition[num][1])
-    PlayerSprite.currentLevel = level
 
     while True:
         # This loop continues until either all players have run out of lives, or the level is completed.
@@ -73,8 +74,8 @@ def playLevel(playerList, playerArmList, level, levelCount, gameOverTextStates, 
                 for num, player in enumerate(playerList):
                     if event.key == controlsDicts[num]["pause"] and player.playerState != c.PlayerStates.DEAD:
                         # Players who have run out of lives cannot pause the game.
-                        # After pausing, the queue is cleared to ensure that no keys pressed during the game
-                        # preparing to pause take effect while paused.
+                        # After pausing, the queue is cleared to ensure that no keys pressed while the game prepares to
+                        # pause will take effect while paused.
 
                         pg.mixer.music.pause()
                         playSound("pause_unpause.wav")
@@ -110,10 +111,10 @@ def playLevel(playerList, playerArmList, level, levelCount, gameOverTextStates, 
                 playerArmList[num].armState = c.ArmStates.OFF_SCREEN
                 if player.playerState in [c.PlayerStates.SWINGING, c.PlayerStates.HITTING_PLAYER_SWINGING]:
                     if player.facingDirection == player.initialSwingDirection:
-                        # The player's state is set to MOVING if they are still facing the same direction as when
-                        # they began swinging.
-                        # Otherwise, it is set to FINISHED_SWINGING, so they have a brief period to pass over a
-                        # black hole sprite that may be beneath them.
+                        # The player's state is set to MOVING if they are still facing the same direction as when they
+                        # began swinging.
+                        # Otherwise, it is set to FINISHED_SWINGING, so they have a brief period to pass over a black
+                        # hole sprite that may be beneath them.
 
                         player.playerState = c.PlayerStates.MOVING
                     else:
@@ -125,96 +126,123 @@ def playLevel(playerList, playerArmList, level, levelCount, gameOverTextStates, 
                                                                             c.OtherStates.FLIPPING_DOWN,
                                                                             c.OtherStates.DELAYED_DOWN,
                                                                             c.OtherStates.OFF_SCREEN]])
-        if goldCount > 0:
-            blitLevelData(playerList, level, goldCount, timeCount, levelCount, highScore)
-            if pausedPlayerNumber == 0:
-                GoldSprite.globalFrameCount += 1
-                for group in c.allGroups:
-                    group.update()
-                    for sprite in group:
-                        # Sprite coordinates are casted to integers before drawing them to the screen, as player
-                        # sprites are measured in sub-pixels.
+        if pausedPlayerNumber == 0:
+            if goldCount > 0 and not all(value == c.TextStates.OFF_SCREEN for value in gameOverTextStates):
+                # Standard gameplay updates every frame until all gold sprites have been revealed or all players have
+                # run out of lives (And their game over text has moved off-screen), unless the game is paused.
 
-                        c.SCREEN.blit(sprite.image, (int(sprite.coordinates[0]), int(sprite.coordinates[1])))
+                blitLevelData(playerList, level, goldCount, timeCount)
+                if pausedPlayerNumber == 0:
+                    GoldSprite.globalFrameCount += 1
+                    for group in c.allGroups:
+                        group.update()
+                        for sprite in group:
+                            # Sprite coordinates are casted to integers before drawing them to the screen, as player
+                            # sprites' coordinates are measured in sub-pixels.
 
-                if frameCount % 5 == 0 and not UrchinSprite.isFrozen:
-                    # Every 5 frames, the timer decreases by 1 (To a minimum of 0).
-                    # The timer will not decrease if an ItemClock's effect is active.
+                            c.SCREEN.blit(sprite.image, (int(sprite.coordinates[0]), int(sprite.coordinates[1])))
 
-                    timeCount = max(0, timeCount - 1)
+                    if frameCount % 5 == 0 and not UrchinSprite.isFrozen:
+                        # Every 5 frames, the timer decreases by 1 (To a minimum of 0).
+                        # The timer will not decrease if an ItemClock's effect is active.
 
-                if timeCount < targetTimeCount:
-                    scoreBonus = False
-                if timeCount > 200 and playingLowTimeMusic:
-                    playingLowTimeMusic = False
-                    pg.mixer.music.load(c.LEVEL_MUSIC)
-                    pg.mixer.music.stop()
-                    pg.mixer.music.play(-1)
-                if timeCount < 200 and not any(value == c.TextStates.ONSCREEN for value in gameOverTextStates):
-                    # Low time music does not play if any game over text sprites are currently onscreen.
+                        timeCount = max(0, timeCount - 1)
 
-                    playingLowTimeMusic = True
-                    pg.mixer.music.load(c.LOW_TIME_MUSIC)
-                    pg.mixer.music.stop()
-                    pg.mixer.music.play(-1)
-                if timeCount == 0:
-                    if not timeReachedZero:
-                        frameCount = 0
-                        timeReachedZero = True
-                        playSound("death.wav")
-                        pg.mixer.music.stop()
-                        for player in playerList:
-                            # When the timer reaches 0, all players onscreen lose a life.
-
-                            if player.playerState not in [c.PlayerStates.DEAD, c.PlayerStates.OFF_SCREEN,
-                                                          c.PlayerStates.FALLING, c.PlayerStates.EXPLODING]:
-                                player.playerState = c.PlayerStates.EXPLODING
-                                player.frameCount = 0
-                    if frameCount == 170 and any(player.playerState != c.PlayerStates.DEAD for player in
-                                                 playerList):
-                        # After 170 frames, the timer is increased if any players are still alive.
-
-                        timeReachedZero = False
-                        timeCount = 400
+                    if timeCount < targetTimeCount:
+                        scoreBonus = False
+                    if timeCount > 200 and playingLowTimeMusic:
+                        playingLowTimeMusic = False
                         pg.mixer.music.load(c.LEVEL_MUSIC)
+                        pg.mixer.music.stop()
                         pg.mixer.music.play(-1)
-                for num, player in enumerate(playerList):
-                    if player.playerState == c.PlayerStates.DEAD:
-                        gameOverTextStates, frameCount = initializeGameOverSprite(gameOverTextStates, num,
-                                                                                  frameCount, timeCount)
+                    if timeCount < 200 and not any(value == c.TextStates.ONSCREEN for value in gameOverTextStates)\
+                            and not playingLowTimeMusic:
+                        # Low time music does not play if any game over text sprites are currently onscreen.
+
+                        playingLowTimeMusic = True
+                        pg.mixer.music.load(c.LOW_TIME_MUSIC)
+                        pg.mixer.music.stop()
+                        pg.mixer.music.play(-1)
+                    if timeCount == 0:
+                        if not timeReachedZero:
+                            frameCount = 0
+                            timeReachedZero = True
+                            playSound("death.wav")
+                            pg.mixer.music.stop()
+                            for player in playerList:
+                                # When the timer reaches 0, all players onscreen lose a life.
+
+                                if player.playerState not in [c.PlayerStates.DEAD, c.PlayerStates.OFF_SCREEN,
+                                                              c.PlayerStates.FALLING, c.PlayerStates.EXPLODING]:
+                                    player.playerState = c.PlayerStates.EXPLODING
+                                    player.frameCount = 0
+                        if frameCount == 170 and any(player.playerState != c.PlayerStates.DEAD for player in
+                                                     playerList):
+                            # After 170 frames, the timer is increased if any players are still alive.
+
+                            timeReachedZero = False
+                            timeCount = 400
+                            pg.mixer.music.load(c.LEVEL_MUSIC)
+                            pg.mixer.music.play(-1)
+                    for num, player in enumerate(playerList):
+                        if player.playerState == c.PlayerStates.DEAD:
+                            gameOverTextStates, frameCount = initializeGameOverSprite(gameOverTextStates, num,
+                                                                                      frameCount, timeCount)
+                else:
+                    # The only game logic that happens while the game is paused is drawing the sprites to the screen
+                    # in the same location they were in prior to the game being paused.
+
+                    for group in c.allGroups:
+                        for sprite in group:
+                            c.SCREEN.blit(sprite.image, (int(sprite.coordinates[0]), int(sprite.coordinates[1])))
+            elif all(value == c.TextStates.OFF_SCREEN for value in gameOverTextStates):
+                if not gameOverStarted:
+                    pg.mixer.music.load(c.LEVEL_END_MUSIC)
+                    pg.mixer.music.stop()
+                    pg.mixer.music.play()
+                    gameOverStarted = True
+                    frameCount = 0
+                elif frameCount < 330:
+                    blitLevelData(playerList, level, goldCount, timeCount, animate=True)
+                    pg.display.update()
+                else:
+                    scrollLevelData(playerList, level, goldCount, timeCount, levelCount, highScore)
+                    for player in playerList:
+                        player.frameCount = 0
+                        player.playerState = c.PlayerStates.LEVEL_END
+                    blitLevelEndData(playerList, level, timeCount, levelCount, highScore, scoreBonus)
+                    for player in playerList:
+                        player.playerState = c.PlayerStates.DEAD
+                    return playerList, highScore
+
+            elif not level.isFlashing:
+                # isFlashing is only set to True once all of the gold sprites are revealed and the level ends.
+                # After 330 frames, the level scrolls off-screen and the next level can begin.
+
+                pg.mixer.music.load(c.LEVEL_END_MUSIC)
+                pg.mixer.music.stop()
+                pg.mixer.music.play()
+                level.isFlashing = True
+                for player in playerList:
+                    if player.playerState != c.PlayerStates.DEAD:
+                        player.playerState = c.PlayerStates.LEVEL_END
+                frameCount = 0
+            elif level.frameCount < 330:
+                level.flashBoard()
+                blitLevelData(playerList, level, 0, timeCount, animate=True)
+                pg.display.update()
             else:
-                # The only game logic that happens while the game is paused is drawing the sprites to the screen
-                # in the same location they were in prior to the game being paused.
-
-                for group in c.allGroups:
-                    for sprite in group:
-                        c.SCREEN.blit(sprite.image, (int(sprite.coordinates[0]), int(sprite.coordinates[1])))
-
-        elif not level.isFlashing:
-            # isFlashing is only set to True once all of the gold sprites are revealed and the level ends.
-            # After 330 frames, the level scrolls off-screen and the next level can begin.
-
-            pg.mixer.music.load(c.LEVEL_END_MUSIC)
-            pg.mixer.music.stop()
-            pg.mixer.music.play()
-            level.isFlashing = True
-            frameCount = 0
-        elif level.frameCount < 330:
-            level.flashBoard()
-            blitLevelData(playerList, level, 0, timeCount, levelCount, highScore, animate=True)
-            pg.display.update()
-        else:
-            blitLevelData(playerList, level, 0, timeCount, levelCount, highScore, scrolling=True)
-            for player in playerList:
-                if player.playerState != c.PlayerStates.DEAD:
-                    player.lives += 1
-                player.playerState = c.PlayerStates.LEVEL_END
-                # getLevelDisplay
-            pg.display.update()
-            pg.time.delay(10000000)
-        #         # Add level end
-        #         pg.display.update()
-        #         pg.time.delay(10000)
+                scrollLevelData(playerList, level, 0, timeCount, levelCount, highScore)
+                for player in playerList:
+                    player.frameCount = 0
+                    if player.playerState == c.PlayerStates.LEVEL_END:
+                        player.lives += 1
+                    player.playerState = c.PlayerStates.LEVEL_END
+                blitLevelEndData(playerList, level, timeCount, levelCount, highScore, scoreBonus)
+                for player in playerList:
+                    if player.lives == 0:
+                        player.playerState = c.PlayerStates.DEAD
+                return playerList, highScore
         pg.display.update()
         frameCount += 1
         if frameCount % 56100 == 0:
@@ -224,18 +252,163 @@ def playLevel(playerList, playerArmList, level, levelCount, gameOverTextStates, 
             # a potential safeguard.
 
             frameCount = 0
-
         c.CLOCK.tick(c.FPS)
 
-        # pg.mixer.music.stop()
-        # pg.mixer.music.play()
-        # pg.time.delay(6000)
-        # pg.mixer.music.load(LEVEL_END_MUSIC)
-        # pg.mixer.music.play()
-        # pg.time.delay(6000)
-        # pg.mixer.music.stop()
-        # pg.event.clear()
-        # return
+
+def playBonusLevel(playerList, playerArmList, level, levelCount, highScore):
+    PlayerSprite.currentLevel = level
+    setLevelSprites(level)
+    setLevelConstants(levelCount)
+    timeCount = setLevelTime(level, levelCount)
+    pausedPlayerNumber = frameCount = 0
+    # scoreBonus tracks if the player should earn bonus points for completing the level quickly. If they complete the
+    # level before the timer reaches targetTimeCount, the bonus is earned. If the timer ever reaches targetTimeCount,
+    # scoringBonus is set to False.
+    # playingLowTime music tracks if the music being played is the 'low time' music. If the timer increases above 200
+    # while it's playing the 'low time' music, it loads and plays the standard music instead.
+    # timeReachedZero tracks if the timer has already reached 0, so it only kills all players once at that point.
+
+    c.SCREEN.fill(level.backgroundColor)
+    goldCount = len(c.goldGroup)
+    blitLevelData(playerList, level, goldCount, timeCount)
+    pg.display.update()
+    pg.mixer.music.load(c.LEVEL_START_MUSIC)
+    pg.mixer.music.play()
+
+    while frameCount < 360:
+        checkQuitGame()
+        frameCount += 1
+        c.CLOCK.tick(c.FPS)
+
+    pg.event.clear()
+    pg.mixer.music.load(c.BONUS_LEVEL_MUSIC)
+    pg.mixer.music.play(-1)
+    for num, player in enumerate(playerList):
+        player.initialize(48 * level.playerStartPosition[num][0], 49 + 48 * level.playerStartPosition[num][1])
+
+    while True:
+        pausedPlayerNumber = checkPauseGame(pausedPlayerNumber)
+        checkQuitGame()
+        for event in pg.event.get():
+            if event.type == pg.KEYDOWN:
+                for num, player in enumerate(playerList):
+                    if event.key == controlsDicts[num]["pause"] and player.playerState != c.PlayerStates.DEAD:
+                        # Players who have run out of lives cannot pause the game.
+                        # After pausing, the queue is cleared to ensure that no keys pressed while the game prepares to
+                        # pause will take effect while paused.
+
+                        pg.mixer.music.pause()
+                        playSound("pause_unpause.wav")
+                        pausedPlayerNumber = num + 1
+                        pg.time.delay(1000)
+                        pg.event.clear()
+                    if event.key in [controlsDicts[num]["up"], controlsDicts[num]["down"],
+                                     controlsDicts[num]["left"], controlsDicts[num]["right"]]:
+                        # If the player presses a direction key while in the BALL state, the move in the direction
+                        # pressed.
+                        # If they are in an 'active' state, the player's arm is extended.
+
+                        if player.playerState == c.PlayerStates.BALL:
+                            directionChosen = [key for key, val in controlsDicts[num].items()
+                                               if val == event.key][0]
+                            player.startMoving(directionChosen)
+                        elif player.playerState in [c.PlayerStates.MOVING, c.PlayerStates.SWINGING,
+                                                    c.PlayerStates.FINISHED_SWINGING]:
+                            directionChosen = [key for key, val in controlsDicts[num].items()
+                                               if val == event.key][0]
+                            playerArmList[num].extendArm(directionChosen)
+                    if event.key == controlsDicts[num]["shoot"]:
+                        shootWave(player)
+        heldKeys = pg.key.get_pressed()
+        for num, player in enumerate(playerList):
+            # Every frame, check if each player is pressing any direction keys.
+            # If not and they are in a swinging state, they stop swinging.
+
+            if not any((heldKeys[keyType] for keyType in [controlsDicts[num]["up"],
+                                                          controlsDicts[num]["down"],
+                                                          controlsDicts[num]["left"],
+                                                          controlsDicts[num]["right"]])):
+                playerArmList[num].armState = c.ArmStates.OFF_SCREEN
+                if player.playerState in [c.PlayerStates.SWINGING, c.PlayerStates.HITTING_PLAYER_SWINGING]:
+                    if player.facingDirection == player.initialSwingDirection:
+                        # The player's state is set to MOVING if they are still facing the same direction as when they
+                        # began swinging.
+                        # Otherwise, it is set to FINISHED_SWINGING, so they have a brief period to pass over a black
+                        # hole sprite that may be beneath them.
+
+                        player.playerState = c.PlayerStates.MOVING
+                    else:
+                        player.playerState = c.PlayerStates.FINISHED_SWINGING
+                    player.frameCount = 0
+                    player.adjustPosition()
+
+        goldCount = len([gold for gold in c.goldGroup if gold.goldState in [c.OtherStates.UPSIDE_DOWN,
+                                                                            c.OtherStates.FLIPPING_DOWN,
+                                                                            c.OtherStates.DELAYED_DOWN,
+                                                                            c.OtherStates.OFF_SCREEN]])
+        if pausedPlayerNumber == 0:
+            if goldCount > 0 and timeCount > 0:
+                blitLevelData(playerList, level, goldCount, timeCount)
+                if pausedPlayerNumber == 0:
+                    GoldSprite.globalFrameCount += 1
+                    for group in c.allGroups:
+                        group.update()
+                        for sprite in group:
+                            # Sprite coordinates are casted to integers before drawing them to the screen, as player
+                            # sprites' coordinates are measured in sub-pixels.
+
+                            c.SCREEN.blit(sprite.image, (int(sprite.coordinates[0]), int(sprite.coordinates[1])))
+
+                    if frameCount % 5 == 0:
+                        # Every 5 frames, the timer decreases by 1 (To a minimum of 0).
+
+                        timeCount = max(0, timeCount - 1)
+
+                else:
+                    # The only game logic that happens while the game is paused is drawing the sprites to the screen
+                    # in the same location they were in prior to the game being paused.
+
+                    for group in c.allGroups:
+                        for sprite in group:
+                            c.SCREEN.blit(sprite.image, (int(sprite.coordinates[0]), int(sprite.coordinates[1])))
+            elif not level.isFlashing:
+                # isFlashing is only set to True once all of the gold sprites are revealed and the level ends.
+                # After 330 frames, the level scrolls off-screen and the next level can begin.
+
+                pg.mixer.music.load(c.LEVEL_END_MUSIC)
+                pg.mixer.music.stop()
+                pg.mixer.music.play()
+                level.isFlashing = True
+                for player in playerList:
+                    if player.playerState != c.PlayerStates.DEAD:
+                        player.playerState = c.PlayerStates.LEVEL_END
+                frameCount = 0
+            elif level.frameCount < 330:
+                level.flashBoard()
+                blitLevelData(playerList, level, 0, timeCount, animate=True)
+                pg.display.update()
+            else:
+                scrollLevelData(playerList, level, 0, timeCount, levelCount, highScore)
+                for player in playerList:
+                    player.frameCount = 0
+                    if player.playerState == c.PlayerStates.LEVEL_END:
+                        player.lives += 1
+                    player.playerState = c.PlayerStates.LEVEL_END
+                blitLevelEndData(playerList, level, timeCount, levelCount, highScore, False)
+                for player in playerList:
+                    if player.lives == 0:
+                        player.playerState = c.PlayerStates.DEAD
+                return playerList, highScore
+        pg.display.update()
+        frameCount += 1
+        if frameCount % 56100 == 0:
+            # All methods that rely on frameCount do so in factors of 56100. To keep frameCount from increasing
+            # without bounds, it resets to 0 every 56100 frames.
+            # Realistically, frameCount will never reach this value in normal gameplay. This is only included as
+            # a potential safeguard.
+
+            frameCount = 0
+        c.CLOCK.tick(c.FPS)
 
 
 def initializeGameOverSprite(gameOverTextStates, index, frameCount, timeCount):
@@ -282,7 +455,7 @@ def initializeGameOverSprite(gameOverTextStates, index, frameCount, timeCount):
         # After 300 frames of being onscreen, the appropriate index of gameOverTextStates is set to OFF_SCREEN.
         # The gameOverTextSprite object is automatically deleted after 300 frames.
 
-        gameOverTextStates[index] = -1
+        gameOverTextStates[index] = c.TextStates.OFF_SCREEN
         pg.mixer.music.stop()
         if all(value == c.TextStates.OFF_SCREEN for value in gameOverTextStates):
             # If no other players have lives remaining, and all gameOverTextSprite objects have been created, the game

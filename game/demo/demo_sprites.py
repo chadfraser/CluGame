@@ -583,6 +583,7 @@ class DemoUrchinSprite(DemoSprite):
         super().__init__(coordinates)
         self.animationFrames = self.spriteSheet.getStripImages(136, 168, 68, 68, 7)
         self.animationCount = 0
+        self.audioCount = 1
         self.image = self.animationFrames[0]
         self.rect = self.image.get_rect()
 
@@ -598,6 +599,12 @@ class DemoUrchinSprite(DemoSprite):
                 self.image = self.animationFrames[0]
             else:
                 self.image = self.animationFrames[1]
+            for sprite in c.demoGroup:
+                if isinstance(sprite, DemoWaveSprite) and self.rect.collidepoint(sprite.rect.center) and\
+                        0 < self.frameCount:
+                    playSound("push_or_shoot_enemy.wav")
+                    self.animationCount = 1
+                    self.frameCount = 0
         elif self.animationCount == 1:
             if self.frameCount < 3:
                 self.image = self.animationFrames[2]
@@ -605,9 +612,17 @@ class DemoUrchinSprite(DemoSprite):
                 self.image = self.animationFrames[3]
             else:
                 self.image = self.animationFrames[4]
+            for sprite in c.demoGroup:
+                if isinstance(sprite, DemoPlayerSprite) and self.rect.colliderect(sprite.rect) and\
+                        self.animationCount == 1:
+                    self.animationCount = 2
+                    self.frameCount = 0
         elif self.animationCount == 2:
             if self.frameCount > 3:
                 self.coordinates = (self.coordinates[0] - 4, self.coordinates[1])
+                self.audioCount += 1
+            if self.audioCount % 10 == 0:
+                    playSound("push_or_shoot_enemy.wav")
         else:
             if self.frameCount < 5:
                 self.image = self.animationFrames[5]
@@ -615,16 +630,6 @@ class DemoUrchinSprite(DemoSprite):
                 self.image = self.animationFrames[6]
             else:
                 self.kill()
-        for sprite in c.demoGroup:
-            if isinstance(sprite, DemoWaveSprite) and self.rect.collidepoint(sprite.rect.center) and\
-                    0 < self.frameCount:
-                playSound("push_or_shoot_enemy.wav")
-                self.animationCount = 1
-                self.frameCount = 0
-            elif isinstance(sprite, DemoPlayerSprite) and self.rect.colliderect(sprite.rect) and\
-                    self.animationCount == 1:
-                self.animationCount = 2
-                self.frameCount = 0
 
 
 class DemoWaveSprite(DemoSprite):

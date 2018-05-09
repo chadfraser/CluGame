@@ -6,6 +6,12 @@ from game.gameplay.title import displayTitleScreen
 
 
 def main():
+    """Set the current score for each player to 0, then run the logic to display the title screen and acknowledge
+    player input.
+
+    This code loops, so the groups are emptied and the title screen is displayed again if the players all get a
+    game over.
+    """
     currentScores = [0, 0, 0, 0]
 
     while True:
@@ -15,11 +21,12 @@ def main():
         for group in c.allGroups:
             if group is not c.itemGroup:
                 group.empty()
-        playerScores = displayTitleScreen(currentScores[0], currentScores[1], currentScores[2], currentScores[3])
+        playerScores = displayTitleScreen(currentScores)
         for num, score in enumerate(playerScores):
             currentScores[num] = score
         pg.display.update()
         c.CLOCK.tick(c.FPS)
 
 
-main()
+if __name__ == "__main__":
+    main()

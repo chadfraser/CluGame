@@ -68,8 +68,8 @@ class GameOverTextSprite(pg.sprite.Sprite):
         """
         super().__init__(c.textGroup)
         spriteSheet = SpriteSheet("display.png")
-        self.image = spriteSheet.getSheetImage(436, 536, 62, 32)
-        self.image.set_colorkey(c.BLACK)
+        self.image = spriteSheet.getSheetImage(437, 536, 62, 32)
+        self.image.set_colorkey(c.RED)
         self.coordinates = (20, 478)
         self.playerNumber = playerNumber
         self.frameCount = 0
@@ -81,7 +81,7 @@ class GameOverTextSprite(pg.sprite.Sprite):
         are set near the left edge of the screen.
         Otherwise, they are set near the right edge of the screen.
         """
-        if (self.playerNumber // len(c.playerGroup)) == 0:
+        if self.playerNumber == 1 or self.playerNumber == 2 and len(c.playerGroup) > 2:
             self.coordinates = (20, 478)
         else:
             self.coordinates = (430, 478)

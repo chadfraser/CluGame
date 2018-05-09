@@ -14,7 +14,7 @@ def getImage(folder, imageFile):
 
     If the image has not already been loaded, it loads the image as a pygame image object.
     If the image has already been loaded before, it simply returns the image.
-    This increases speed, as it prevents images from needlessly loading repeatedly.
+    This increases speed, as it prevents images from needlessly loading multiple times.
 
     Args:
         folder: The string path that the image can be found in.
@@ -41,8 +41,8 @@ def playSound(soundFile):
     """Play a sound from the passed file location, in the music folder path.
 
     If the sound has not already been loaded, it loads the sound as a pygame mixer sound object.
-    If the sound has already been loaded before, it simply returns the sound .
-    This increases speed, as it prevents sounds from needlessly loading repeatedly.
+    If the sound has already been loaded before, it simply returns the sound.
+    This increases speed, as it prevents sounds from needlessly loading multiple times.
 
     Args:
         soundFile: The string of the file for the sound, not including the file path.
@@ -58,8 +58,4 @@ def playSound(soundFile):
             print("ERROR: Cannot find sound '{}'".format(soundFile))
             pygame.quit()
             sys.exit()
-        # if soundFile == "push_or_shoot_enemy.wav":
-        #     sound.set_volume(0.5)
     sound.play()
-
-

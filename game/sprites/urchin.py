@@ -59,6 +59,7 @@ class UrchinSprite(pg.sprite.Sprite):
         self.facingDirection = c.Directions.RIGHT
         self.bouncingOff = self.running = False
         self.frameCount = self.animationCount = self.delayCount = 0
+        self.audioCount = 1
 
         self.imageDict = {c.BLUE: {}, c.YELLOW: {}}
         self.imageDictKeys = ["horizontal", "vertical", "ball"]
@@ -368,7 +369,9 @@ class UrchinSprite(pg.sprite.Sprite):
         """
         if self.enemyState not in [c.EnemyStates.EXPLODING, c.EnemyStates.OFF_SCREEN]:
             if any(wave.rect.collidepoint(self.rect.center) for wave in c.attackGroup):
-                playSound("push_enemy.wav")
+                self.audioCount += 1
+                if self.audioCount % 4 == 0:
+                    playSound("push_or_shoot_enemy.wav")
                 self.color = c.YELLOW
                 if self.enemyState == c.EnemyStates.BALL:
                     key = "ball"
@@ -411,10 +414,11 @@ class UrchinSprite(pg.sprite.Sprite):
         middle of the intersection.
         """
         self.animationCount = 0
-        # if not pygame.mixer.Channel(1).get_busy():
-        #     pygame.mixer.Channel(1).play(pygame.mixer.Sound(os.path.join(musicFolder, "push_enemy.wav")))
-        playSound("push_enemy.wav")
-        if any(levelRect.colliderect(self.collisionRect) for levelRect in PlayerSprite.currentLevel.levelBorderRects):
+        self.audioCount += 1
+        if self.audioCount % 10 == 0:
+            playSound("push_or_shoot_enemy.wav")
+        if any(levelRect.colliderect(self.collisionRect) for levelRect in PlayerSprite.currentLevel.levelBorderRects)\
+                and self.enemyState != c.EnemyStates.EXPLODING:
             playSound("crush_enemy.wav")
             self.enemyState = c.EnemyStates.EXPLODING
             self.frameCount = 0

@@ -148,6 +148,7 @@ directionList = [Directions.RIGHT, Directions.UP, Directions.LEFT, Directions.DO
 
 demoGroup = pg.sprite.Group()
 
+displayGroup = pg.sprite.Group()
 itemGroup = pg.sprite.Group()
 blackHoleGroup = pg.sprite.Group()
 enemyGroup = pg.sprite.Group()
@@ -162,6 +163,6 @@ textGroup = pg.sprite.Group()
 # demoGroup is excluded from allGroups because we are not concerned with updating it during normal gameplay, as it only
 # updates during the demo.
 
-oneLevelOnlyGroups = (blackHoleGroup, enemyGroup, goldGroup, rubberGroup, attackGroup, textGroup)
-allGroups = (itemGroup, blackHoleGroup, enemyGroup, goldGroup, rubberGroup, armGroup, playerGroup, attackGroup,
-             textGroup)
+oneLevelOnlyGroups = (displayGroup, blackHoleGroup, enemyGroup, goldGroup, rubberGroup, attackGroup, textGroup)
+allGroups = (displayGroup, itemGroup, blackHoleGroup, enemyGroup, goldGroup, rubberGroup, armGroup, playerGroup,
+             attackGroup, textGroup)

@@ -225,24 +225,30 @@ class PlayerArmSprite(pg.sprite.Sprite):
                 any(self.playerBody.rect.colliderect(trap.collisionRect) for trap in c.rubberGroup) and not \
                 self.playerBody.isFrozen:
             if self.collisionRect[0] % 48 in range(34, 39) and self.collisionRect[1] % 48 in range(34, 39) and \
-                                    70 < self.collisionRect[0] < 420 and 20 < self.collisionRect[1] < 500:
+                                    30 < self.collisionRect[0] < 500 and 20 < self.collisionRect[1] < 500:
+                """CHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAANG"""
                 playSound("grab_post_move_end.wav")
                 self.armState = c.ArmStates.SWINGING
                 self.playerBody.playerState = c.PlayerStates.SWINGING
                 self.setSwingDirection()
-                self.offsetGrabCoordinates(self.collisionRect[0] % 48 - 34, self.collisionRect[1] % 48 - 36)
+
                 if self.extendedDirection == c.Directions.LEFT:
                     self.playerBody.currentAngle = 0
                     self.currentAngleOctant = 0
+                    self.coordinates = (self.coordinates[0] - 2, self.coordinates[1] - 2)
                 elif self.extendedDirection == c.Directions.UP:
                     self.playerBody.currentAngle = 90
                     self.currentAngleOctant = 2
+                    self.coordinates = (self.coordinates[0], self.coordinates[1] - 4)
                 elif self.extendedDirection == c.Directions.RIGHT:
                     self.playerBody.currentAngle = 180
                     self.currentAngleOctant = 4
+                    self.coordinates = (self.coordinates[0] + 2, self.coordinates[1] - 2)
                 else:
                     self.playerBody.currentAngle = 270
                     self.currentAngleOctant = 6
+
+                self.offsetGrabCoordinates(self.collisionRect[0] % 48 - 34, self.collisionRect[1] % 48 - 36)
                 self.playerBody.swingingArmCoordinates = self.collisionRect.center
 
     def reverseDirection(self):

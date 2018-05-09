@@ -1,6 +1,7 @@
 import pygame as pg
 import random
 
+from game.gameplay.level import BonusLevel
 from game.sprites.player import PlayerSprite
 from game.sprites.sprite_sheet import SpriteSheet
 from game.sprites.urchin import UrchinSprite
@@ -67,6 +68,11 @@ class Item(pg.sprite.Sprite):
         self.coordinates = x, y
         self.rect.topleft = x, y
         self.collisionRect.topleft = x + 8, y + 4
+
+    def reset(self):
+        self.setCoordinates(0, 0)
+        self.triggerRect.topleft = (0, 0)
+        self.itemState = c.OtherStates.DEAD
 
     def initialize(self, x, y, triggerX, triggerY):
         """Set the sprite's coordinates and triggerRect's coordinates using the passed arguments.
@@ -328,9 +334,13 @@ def initializeLevelItems(level):
     """Randomly decide which items to include in the level, where to place them, and where to place their
     triggerRects.
 
-    To ensure that no items exist off-screen, this function first sets all items' itemState to DEAD, then only
-    initializes the randomly sampled items.
+    To ensure that no items exist off-screen, or from the previous level, this function first sets all items'
+    itemState to DEAD, and only then initializes the randomly sampled items.
     """
+    for item in c.itemGroup:
+        item.reset()
+    if isinstance(level, BonusLevel):
+        return
     numberOfMinorItems = random.randint(2, 4)
     numberOfMajorItems = random.randint(0, min(3, 5 - numberOfMinorItems))
     currentMinorItems = random.sample(minorItems, numberOfMinorItems)
@@ -338,8 +348,6 @@ def initializeLevelItems(level):
     currentItems = currentMinorItems + currentMajorItems
     triggerLocations = random.choices(level.itemTiles, k=(numberOfMajorItems + numberOfMinorItems))
     itemLocations = random.sample(level.itemTiles, k=(numberOfMajorItems + numberOfMinorItems))
-    for item in c.itemGroup:
-        item.itemState = c.OtherStates.DEAD
     for num, item in enumerate(currentItems):
         item.initialize(itemLocations[num][0], itemLocations[num][1],
                         triggerLocations[num][0], triggerLocations[num][1])

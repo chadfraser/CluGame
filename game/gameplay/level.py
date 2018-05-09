@@ -60,7 +60,7 @@ class Level:
         self.frameCount = 0
 
     def initialize(self):
-        """Set the relevant variables of the level to its initial values."""
+        """Set the relevant variables of the level to their initial values."""
         self.isFlashing = False
         self.image = self.standardImage
         self.frameCount = 0
@@ -202,7 +202,7 @@ class BoardThreeLevel(Level):
         self.lightImage = getImage(c.BACKGROUND_FOLDER, "background_3B.png")
         self.image = self.standardImage
         self.backgroundColor = c.DARK_BLUE
-        self.playerStartPosition = [(4, 1), (4, 6), (1, 3), (9, 3)]
+        self.playerStartPosition = [(5, 1), (5, 6), (1, 3), (9, 3)]
         self.blackHolePositions = [(4, 4), (6, 4)]
         self.itemTiles = [(x, y) for x in range(1, 10) for y in range(0, 8) if (x, y) not in self.playerStartPosition
                           and (x, y) not in self.blackHolePositions and (x, y) not in [(4, 0), (5, 0), (6, 0),
@@ -298,7 +298,7 @@ class BoardFiveLevel(Level):
         self.image = self.standardImage
         self.backgroundColor = c.DARK_ORANGE
         self.activeRubberTraps = [(1, 4), (9, 4)]
-        self.playerStartPosition = [(1, 0), (9, 0), (3, 7), (5, 7)]
+        self.playerStartPosition = [(1, 0), (9, 0), (4, 7), (6, 7)]
         self.blackHolePositions = [(2, 4), (4, 4), (6, 4), (8, 4)]
         self.itemTiles = [(x, y) for x in range(0, 11) for y in range(0, 8) if (x, y) not in self.playerStartPosition
                           and (x, y) not in self.blackHolePositions and (x, y) not in [(0, 0), (5, 0), (10, 0),
@@ -311,7 +311,7 @@ class BoardFiveLevel(Level):
 class BonusLevel(Level):
     """Create a new object of the sixth, bonus variant of levels.
 
-    Note that since the bonus level style is unique, the arguments that are usually passed to the other level
+    Note that since the bonus level layout is unique, the arguments that are usually passed to the other level
     variants are instead created as constant instance variables in the bonus level __init__ method.
     """
 
@@ -333,7 +333,7 @@ class BonusLevel(Level):
         """
         goldTilesHorizontal = [(2, 1), (3, 1), (4, 1), (5, 1), (6, 1), (7, 1), (8, 1), (2, 2), (3, 2), (4, 2), (5, 2),
                                (6, 2), (7, 2), (8, 2), (2, 3), (8, 3), (2, 4), (8, 4), (2, 5), (8, 5), (2, 6), (3, 6),
-                               (4, 6), (5, 6), (6, 6), (7, 6), (8, 7), (2, 7), (3, 7), (4, 7), (5, 7), (6, 7), (7, 7),
+                               (4, 6), (5, 6), (6, 6), (7, 6), (8, 6), (2, 7), (3, 7), (4, 7), (5, 7), (6, 7), (7, 7),
                                (8, 7)]
         goldTilesVertical = [(2, 1), (3, 1), (4, 1), (5, 1), (6, 1), (7, 1), (8, 1), (9, 1), (2, 2), (3, 2), (8, 2),
                              (9, 2), (2, 3), (3, 3), (8, 3), (9, 3), (2, 4), (3, 4), (8, 4), (9, 4), (2, 5), (3, 5),
@@ -343,7 +343,7 @@ class BonusLevel(Level):
         self.lightImage = getImage(c.BACKGROUND_FOLDER, "background_6B.png")
         self.image = self.standardImage
         self.backgroundColor = c.DARK_RED
-        self.playerStartPosition = [(5, 1), (7, 1), (4, 6), (8, 6)]
+        self.playerStartPosition = [(4, 1), (6, 1), (3, 6), (7, 6)]
         self.levelBorderRects = [pygame.Rect(0, 0, 512, 36), pygame.Rect(188, 186, 136, 94),
                                  pygame.Rect(0, 426, 512, 36), pygame.Rect(0, 0, 39, 448),
                                  pygame.Rect(477, 0, 39, 448)]
@@ -372,17 +372,25 @@ HUMAN = BoardOneLevel([(5, 3)], [],
                       [(5, 1), (6, 1), (3, 2), (8, 2), (2, 3), (3, 3), (4, 3), (7, 3), (8, 3), (9, 3), (4, 4), (7, 4),
                        (4, 5), (7, 5), (4, 6), (5, 6), (6, 6), (7, 6)])
 BUBBLES = BoardOneLevel([], [],
-                        [],
-                        [])
-KE = BoardOneLevel([], [],
-                   [],
-                   [])
-TELEVISION = BoardOneLevel([], [],
-                           [],
-                           [])
-KOOPA = BoardOneLevel([], [],
-                      [],
-                      [])
+                        [(3, 1), (4, 1), (5, 1), (2, 2), (6, 2), (8, 3), (7, 4), (8, 4), (2, 5), (6, 5), (2, 6),
+                         (3, 6), (4, 6), (5, 6), (6, 6)],
+                        [(3, 1), (6, 1), (2, 2), (4, 2), (5, 2), (7, 2), (2, 3), (7, 3), (8, 3), (9, 3), (2, 4),
+                         (7, 4), (3, 5), (6, 5), (4, 6), (5, 6)])
+LETTER_KE = BoardOneLevel([], [(5, 6)],
+                          [(3, 1), (7, 1), (6, 2), (8, 2), (6, 3), (8, 3), (6, 6), (3, 7), (6, 7), (7, 7)],
+                          [(3, 1), (4, 1), (7, 1), (8, 1), (3, 2), (4, 2), (6, 2), (9, 2), (3, 3), (4, 3), (7, 3),
+                           (8, 3), (3, 4), (4, 4), (7, 4), (8, 4), (3, 5), (4, 5), (7, 5), (8, 5), (3, 6), (4, 6),
+                           (6, 6), (8, 6)])
+TELEVISION = BoardOneLevel([], [(2, 4), (9, 4)],
+                           [(4, 1), (6, 1), (4, 2), (5, 2), (6, 2), (3, 3), (4, 3), (5, 3), (6, 3), (7, 3), (4, 4),
+                            (5, 4), (6, 4), (4, 6), (5, 6), (6, 6), (3, 7), (4, 7), (5, 7), (6, 7), (7, 7)],
+                           [(5, 1), (6, 1), (4, 2), (7, 2), (3, 3), (8, 3), (3, 4), (4, 4), (7, 4), (8, 4), (3, 5),
+                            (4, 5), (7, 5), (8, 5), (3, 6), (8, 6)])
+KOOPA = BoardOneLevel([], [(7, 4)],
+                      [(3, 1), (2, 2), (5, 2), (6, 2), (2, 3), (4, 3), (7, 3), (3, 5), (3, 6), (4, 6), (5, 6), (6, 6),
+                       (7, 6), (3, 7), (7, 7)],
+                      [(3, 1), (4, 1), (2, 2), (4, 2), (5, 2), (7, 2), (3, 3), (4, 3), (8, 3), (3, 4), (4, 4), (8, 4),
+                       (3, 5), (8, 5), (4, 6), (7, 6)])
 CLOWN = BoardTwoLevel([(5, 2)], [(4, 6), (7, 6)],
                       [(3, 2), (7, 2), (2, 3), (4, 3), (6, 3), (8, 3), (2, 4), (4, 4), (6, 4), (8, 4), (3, 5), (5, 5),
                        (7, 5), (5, 7)],
@@ -403,18 +411,25 @@ EAGLE = BoardTwoLevel([(4, 4), (6, 4)], [],
                        (4, 5), (6, 5), (7, 5), (4, 6), (5, 6), (6, 6), (4, 7), (6, 7)],
                       [(5, 1), (7, 1), (5, 2), (6, 2), (2, 3), (9, 3), (3, 4), (8, 4), (5, 5), (6, 5), (4, 6), (5, 6),
                        (6, 6), (7, 6)])
-RAIN = BoardTwoLevel([], [],
-                     [],
-                     [])
-CAR = BoardTwoLevel([], [],
-                    [],
-                    [])
-MUSHROOM = BoardTwoLevel([], [],
-                         [],
-                         [])
-SKULL = BoardTwoLevel([], [],
-                      [],
-                      [])
+RAIN = BoardTwoLevel([(5, 2)], [],
+                     [(4, 1), (5, 1), (6, 1), (3, 2), (7, 2), (2, 3), (8, 3), (2, 4), (3, 4), (4, 4), (5, 4), (6, 4),
+                      (7, 4), (8, 4)],
+                     [(4, 1), (7, 1), (3, 2), (8, 2), (2, 3), (9, 3), (4, 4), (6, 4), (8, 4), (3, 5), (5, 5), (7, 5)])
+CAR = BoardTwoLevel([(3, 5), (7, 5)], [],
+                    [(4, 2), (5, 2), (6, 2), (7, 2), (3, 3), (8, 3), (2, 4), (5, 4), (7, 4), (8, 4), (2, 6), (3, 6),
+                     (4, 6), (5, 6), (6, 6), (7, 6), (8, 6)],
+                    [(4, 2), (7, 2), (8, 2), (3, 3), (7, 3), (9, 3), (2, 4), (5, 4), (6, 4), (9, 4), (2, 5), (5, 5),
+                     (6, 5), (9, 5)])
+MUSHROOM = BoardTwoLevel([(5, 4)], [],
+                         [(4, 1), (5, 1), (6, 1), (3, 2), (7, 2), (2, 3), (8, 3), (2, 5), (3, 5), (4, 5), (5, 5),
+                          (6, 5), (7, 5), (8, 5), (4, 7), (5, 7), (6, 7)],
+                         [(4, 1), (7, 1), (3, 2), (8, 2), (2, 3), (9, 3), (2, 4), (9, 4), (4, 5), (5, 5), (6, 5),
+                          (7, 5), (4, 6), (7, 6)])
+SKULL = BoardTwoLevel([(5, 7)], [],
+                      [(3, 1), (4, 1), (5, 1), (6, 1), (7, 1), (4, 2), (6, 2), (3, 4), (4, 4), (6, 4), (7, 4), (3, 5),
+                       (5, 5), (7, 5), (4, 6), (5, 6), (6, 6), (3, 7), (7, 7)],
+                      [(3, 1), (8, 1), (3, 2), (5, 2), (6, 2), (8, 2), (3, 3), (8, 3), (5, 4), (6, 4), (4, 5), (7, 5),
+                       (4, 6), (7, 6)])
 SUBMARINE = BoardThreeLevel([], [(3, 1), (8, 1)],
                             [(4, 3), (5, 3), (8, 3), (2, 4), (3, 4), (4, 4), (5, 4), (6, 4), (7, 4), (8, 4), (7, 5),
                              (8, 5), (2, 6), (3, 6), (4, 6), (5, 6), (6, 6), (8, 6)],
@@ -433,18 +448,25 @@ BUTTERFLY = BoardThreeLevel([], [(5, 2), (6, 2)],
                              (5, 6), (7, 6), (8, 6)],
                             [(2, 2), (3, 2), (8, 2), (9, 2), (2, 3), (4, 3), (7, 3), (9, 3), (2, 4), (5, 4), (6, 4),
                              (9, 4), (2, 5), (4, 5), (5, 5), (6, 5), (7, 5), (9, 5)])
-FISH = BoardThreeLevel([], [],
-                       [],
-                       [])
-CLU_CLU = BoardThreeLevel([], [],
-                          [],
-                          [])
-CROWN = BoardThreeLevel([], [],
-                        [],
-                        [])
-SWORD_SHIELD = BoardThreeLevel([], [],
-                               [],
-                               [])
+FISH = BoardThreeLevel([(2, 1), (8, 1), (7, 5)], [],
+                       [(2, 2), (6, 2), (7, 2), (8, 2), (3, 3), (4, 4), (5, 4), (4, 5), (5, 5), (3, 6), (6, 6), (7, 6),
+                        (8, 6), (2, 7)],
+                       [(2, 2), (3, 2), (6, 2), (9, 2), (2, 3), (4, 3), (6, 3), (8, 3), (9, 3), (2, 4), (5, 4), (9, 4),
+                        (2, 5), (4, 5), (6, 5), (9, 5), (2, 6), (3, 6)])
+CLU_CLU = BoardThreeLevel([], [(8, 3), (3, 4)],
+                          [(2, 1), (8, 1), (8, 2), (2, 3), (4, 3), (6, 3), (4, 4), (2, 6), (4, 6), (6, 6), (8, 6)],
+                          [(2, 1), (8, 1), (9, 1), (2, 2), (4, 2), (6, 2), (7, 2), (4, 4), (4, 5), (6, 5), (8, 5),
+                           (9, 5), (2, 6), (3, 6)])
+CROWN = BoardThreeLevel([(2, 7), (8, 7)], [(4, 2), (7, 2)],
+                        [(2, 1), (8, 1), (2, 2), (5, 2), (8, 2), (5, 3), (3, 4), (4, 4), (6, 4), (7, 4), (2, 6),
+                         (3, 6), (4, 6), (5, 6), (6, 6), (7, 6), (8, 6)],
+                        [(2, 1), (3, 1), (8, 1), (9, 1), (2, 2), (3, 2), (5, 2), (6, 2), (8, 2), (9, 2), (2, 3),
+                         (3, 3), (5, 3), (6, 3), (8, 3), (9, 3), (2, 4), (9, 4), (2, 5), (9, 5)])
+SWORD_SHIELD = BoardThreeLevel([(7, 4), (2, 7), (8, 7)], [(2, 1)],
+                               [(3, 2), (6, 3), (7, 3), (8, 3), (2, 5), (3, 5), (4, 5), (6, 5), (8, 5), (3, 6),
+                                (7, 6)],
+                               [(3, 2), (4, 2), (3, 3), (4, 3), (6, 3), (9, 3), (3, 4), (4, 4), (6, 4), (9, 4), (3, 5),
+                                (4, 5), (7, 5), (8, 5)])
 HOLE = BoardFourLevel([(3, 3), (7, 3)], [(4, 4), (7, 4)],
                       [(3, 1), (7, 1), (3, 2), (7, 2), (5, 3), (2, 4), (5, 4), (8, 4), (2, 5), (5, 5), (8, 5), (3, 6),
                        (7, 6), (3, 7), (7, 7)],
@@ -465,18 +487,25 @@ LETTER_H = BoardFourLevel([(4, 4), (6, 4)], [(3, 3), (8, 3), (3, 5), (8, 5)],
                            (3, 7), (7, 7), (8, 7)],
                           [(2, 1), (4, 1), (7, 1), (9, 1), (2, 2), (4, 2), (7, 2), (9, 2), (2, 3), (9, 3), (2, 4),
                            (9, 4), (2, 5), (4, 5), (7, 5), (9, 5), (2, 6), (4, 6), (7, 6), (9, 6)])
-PUNCTUATION = BoardFourLevel([], [],
-                             [],
-                             [])
-FROWN = BoardFourLevel([], [],
-                       [],
-                       [])
-PYTHON = BoardFourLevel([], [],
-                        [],
-                        [])
-FLIP = BoardFourLevel([], [],
-                      [],
-                      [])
+PUNCTUATION = BoardFourLevel([], [(6, 3), (5, 4), (2, 6), (9, 6)],
+                             [(3, 1), (7, 1), (8, 1), (7, 2), (7, 3), (8, 4), (3, 5), (7, 5), (3, 6), (7, 6), (3, 7),
+                              (7, 7)],
+                             [(3, 1), (4, 1), (7, 1), (9, 1), (3, 2), (4, 2), (8, 2), (9, 2), (3, 3), (4, 3), (7, 3),
+                              (9, 3), (3, 4), (4, 4), (7, 4), (8, 4), (3, 6), (4, 6), (7, 6), (8, 6)])
+FROWN = BoardFourLevel([], [(2, 3), (9, 3)],
+                       [(3, 1), (7, 1), (3, 3), (7, 3), (3, 4), (4, 4), (5, 4), (6, 4), (7, 4), (4, 5), (5, 5), (6, 5),
+                        (3, 7), (7, 7)],
+                       [(3, 1), (4, 1), (7, 1), (8, 1), (3, 2), (4, 2), (7, 2), (8, 2), (3, 4), (8, 4), (3, 5), (4, 5),
+                        (7, 5), (8, 5), (3, 6), (4, 6), (7, 6), (8, 6)])
+PYTHON = BoardFourLevel([(2, 1), (8, 7)], [],
+                        [(8, 1), (7, 2), (3, 3), (4, 3), (5, 3), (6, 3), (2, 4), (4, 4), (5, 4), (6, 4), (8, 4),
+                         (4, 5), (5, 5), (6, 5), (7, 5), (3, 6), (2, 7)],
+                        [(8, 1), (9, 1), (7, 2), (8, 2), (9, 2), (3, 3), (7, 3), (9, 3), (2, 4), (4, 4), (8, 4),
+                         (2, 5), (3, 5), (4, 5), (2, 6), (3, 6)])
+FLIP = BoardFourLevel([(7, 2), (5, 3), (3, 6)], [],
+                      [(2, 1), (2, 2), (3, 2), (7, 3), (5, 4), (3, 5), (5, 5), (7, 6), (8, 6), (8, 7)],
+                      [(2, 1), (3, 1), (9, 1), (3, 2), (4, 2), (9, 2), (3, 3), (4, 3), (7, 3), (8, 3), (3, 4), (4, 4),
+                       (5, 4), (6, 4), (7, 4), (8, 4), (2, 5), (7, 5), (8, 5), (2, 6), (8, 6), (9, 6)])
 SPIDER = BoardFiveLevel([(3, 4), (7, 4)], [(1, 2), (4, 2), (7, 2), (4, 5), (7, 5), (10, 5)],
                         [(2, 1), (8, 1), (5, 2), (2, 3), (8, 3), (2, 5), (8, 5), (5, 6), (2, 7), (8, 7)],
                         [(3, 1), (8, 1), (2, 2), (9, 2), (5, 3), (6, 3), (5, 4), (6, 4), (2, 5), (9, 5), (3, 6),
@@ -501,32 +530,22 @@ BOX_PLUS = BoardFiveLevel([], [(2, 2), (9, 2), (4, 5), (7, 5)],
                           [(2, 1), (8, 1), (5, 2), (5, 3), (5, 5), (5, 6), (3, 7), (7, 7)],
                           [(1, 2), (3, 2), (5, 2), (6, 2), (8, 2), (10, 2), (5, 3), (6, 3), (5, 4), (6, 4), (1, 5),
                            (2, 5), (3, 5), (5, 5), (6, 5), (8, 5), (9, 5), (10, 5)])
-CRUSHER = BoardFiveLevel([(4, 2), (6, 6)], [(6, 3), (5, 4)],
-                         [(2, 1), (8, 1), (6, 2), (1, 3), (9, 3), (1, 5), (9, 5), (4, 6), (2, 7), (8, 7)],
-                         [(2, 1), (3, 1), (8, 1), (9, 1), (1, 2), (2, 2), (3, 2), (8, 2), (9, 2), (10, 2), (3, 3),
-                          (8, 3), (3, 4), (8, 4), (1, 5), (2, 5), (3, 5), (8, 5), (9, 5), (10, 5), (2, 6), (3, 6),
-                          (8, 6), (9, 6)])
+CRUSHER = BoardFiveLevel([(4, 2), (6, 6)], [],
+                         [(2, 1), (8, 1), (1, 3), (9, 3), (5, 4), (1, 5), (9, 5), (2, 7), (8, 7)],
+                         [(2, 1), (3, 1), (8, 1), (9, 1), (2, 2), (3, 2), (8, 2), (9, 2), (3, 3), (8, 3), (3, 4),
+                          (8, 4), (2, 5), (3, 5), (8, 5), (9, 5), (2, 6), (3, 6), (8, 6), (9, 6)])
 KEY_PLUS = BoardFiveLevel([(3, 4), (5, 4), (7, 4)], [],
-                          [(2, 1), (8, 1), (1, 2), (5, 2), (9, 2), (1, 3), (2, 3), (4, 3), (6, 3), (8, 3), (9, 3),
-                           (1, 5), (2, 5), (4, 5), (6, 5), (8, 5), (9, 5), (1, 6), (5, 6), (9, 6), (2, 7), (8, 7)],
-                          [(2, 1), (3, 1), (8, 1), (9, 1), (1, 2), (3, 2), (5, 2), (6, 2), (8, 2), (10, 2), (1, 5),
-                           (3, 5), (5, 5), (6, 5), (8, 5), (10, 5), (2, 6), (3, 6), (8, 6), (9, 6)])
+                          [(1, 2), (5, 2), (9, 2), (1, 3), (2, 3), (4, 3), (6, 3), (8, 3), (9, 3),
+                           (1, 5), (2, 5), (4, 5), (6, 5), (8, 5), (9, 5), (1, 6), (5, 6), (9, 6)],
+                          [(2, 1), (3, 1), (8, 1), (9, 1), (3, 2), (5, 2), (6, 2), (8, 2),
+                           (3, 5), (5, 5), (6, 5), (8, 5), (2, 6), (3, 6), (8, 6), (9, 6)])
 BONUS_LEVEL = BonusLevel()
 
-# boardOneLevels = [HEART, HOUSE, FACE, HUMAN, BUBBLES, KE, TELEVISION, KOOPA]
-# boardTwoLevels = [CLOWN, SPADE, MOUSE, EAGLE, RAIN, CAR, MUSHROOM, SKULL]
-# boardThreeLevels = [SUBMARINE, GLASSES, KOALA, BUTTERFLY, FISH, CLU_CLU, CROWN, SWORD_SHIELD]
-# boardFourLevels = [HOLE, KEY, RIBBON, LETTER_H, PUNCTUATION, FROWN, PYTHON, FLIP]
-# boardFiveLevels = [SPIDER, LETTER_X, BOX, DIAMOND, INVERTED_DIAMOND, BOX_PLUS, CRUSHER, KEY_PLUS]
-# boardOneLevels = [HEART, HOUSE, FACE, HUMAN]
-
-SAMPLE = BoardOneLevel([], [], [(3, 1)], [(3, 1)])
-
-boardOneLevels = [SAMPLE]
-boardTwoLevels = [CLOWN, SPADE, MOUSE, EAGLE]
-boardThreeLevels = [SUBMARINE, GLASSES, KOALA, BUTTERFLY]
-boardFourLevels = [HOLE, KEY, RIBBON, LETTER_H]
-boardFiveLevels = [SPIDER, LETTER_X, BOX, DIAMOND]
+boardOneLevels = [HEART, HOUSE, FACE, HUMAN, BUBBLES, LETTER_KE, TELEVISION, KOOPA]
+boardTwoLevels = [CLOWN, SPADE, MOUSE, EAGLE, RAIN, CAR, MUSHROOM, SKULL]
+boardThreeLevels = [SUBMARINE, GLASSES, KOALA, BUTTERFLY, FISH, CLU_CLU, CROWN, SWORD_SHIELD]
+boardFourLevels = [HOLE, KEY, RIBBON, LETTER_H, PUNCTUATION, FROWN, PYTHON, FLIP]
+boardFiveLevels = [SPIDER, LETTER_X, BOX, DIAMOND, INVERTED_DIAMOND, BOX_PLUS, CRUSHER, KEY_PLUS]
 
 allBoardsPastOneList = [boardTwoLevels, boardThreeLevels, boardFourLevels, boardFiveLevels]
 

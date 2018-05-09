@@ -3,18 +3,18 @@ import sys
 
 from game.demo.demo import animateDemo
 from game.gameplay.menu import chooseNumberOfPlayers, displayChangeControlMenu
-from game.gameplay.play_level import playLevel
-from game.gameplay.level import getLevelOrder
+from game.gameplay.play_level import playBonusLevel, playLevel
+from game.gameplay.level import BonusLevel, getLevelOrder
 from game.gameplay.state import checkQuitGame
 from game.sprites.title import TitleBoxSprite, TitleTextSprite
 from game.sprites.player import PlayerSprite
 from game.sprites.player_arm import PlayerArmSprite
 import game.tools.constants as c
 from game.tools.controls import controlsDicts
-from game.tools.scores import getHighScore
+from game.tools.scores import getHighScore, setHighScore
 
 
-def displayTitleScreen(playerOneScore=0, playerTwoScore=0, playerThreeScore=0, playerFourScore=0):
+def displayTitleScreen(playerScores=None):
     """Display the title screen, including all players' current scores and the recorded high score.
 
     Args:
@@ -27,6 +27,9 @@ def displayTitleScreen(playerOneScore=0, playerTwoScore=0, playerThreeScore=0, p
         playerFourScore: An integer representing the most recent score earned by player four.
             Defaults to 0.
     """
+    if playerScores is None:
+        playerScores = [0, 0, 0, 0]
+
     highScore = getHighScore()
     titleImageOne = TitleTextSprite()
     titleImageTwo = TitleTextSprite(False)
@@ -36,17 +39,21 @@ def displayTitleScreen(playerOneScore=0, playerTwoScore=0, playerThreeScore=0, p
     playText = c.FONT.render("PLAY GAME", False, c.CYAN)
     changeText = c.FONT.render("CHANGE CONTROLS", False, c.CYAN)
     cursorText = c.FONT.render(">", False, c.ORANGE)
-    highScoreText = c.FONT.render("TOP,{:06d}".format(highScore), False, c.PINK)
-    playerScoreTexts = [c.FONT.render("I,{:06d}".format(playerOneScore), False, c.WHITE),
-                        c.FONT.render("~,{:06d}".format(playerTwoScore), False, c.WHITE),
-                        c.FONT.render("{{,{:06d}".format(playerThreeScore), False, c.WHITE),
-                        c.FONT.render("}},{:06d}".format(playerFourScore), False, c.WHITE)]
-    scoreTextCoordinates = [(62, 400), (307, 400), (62, 425), (307, 425)]
 
     while True:
         # If the player does not select an option within 740 frames, the demo is animated. After the demo, or after the
         # player has made a selection, looping is set to False so this loop resets the music, frameCount, cursor
         # location, and title images
+
+        highScoreText = c.FONT.render("TOP,{:06d}".format(highScore), False, c.PINK)
+        # Note that this font is designed so the symbols "~", "{", and "}" form the roman numerals for 2, 3, and 4
+        # respectively.
+
+        playerScoreTexts = [c.FONT.render("I,{:06d}".format(playerScores[0]), False, c.WHITE),
+                            c.FONT.render("~,{:06d}".format(playerScores[1]), False, c.WHITE),
+                            c.FONT.render("{{,{:06d}".format(playerScores[2]), False, c.WHITE),
+                            c.FONT.render("}},{:06d}".format(playerScores[3]), False, c.WHITE)]
+        scoreTextCoordinates = [(62, 400), (307, 400), (62, 425), (307, 425)]
 
         pg.mixer.music.load(c.TITLE_MUSIC)
         pg.mixer.music.play()
@@ -66,7 +73,10 @@ def displayTitleScreen(playerOneScore=0, playerTwoScore=0, playerThreeScore=0, p
                         if cursorLocation == (150, 310):
                             numberOfPlayers = chooseNumberOfPlayers(titleImageOne, titleImageTwo, subtitleImage,
                                                                     "GAME")
-                            startGame(numberOfPlayers, highScore)
+                            playerScores = startGame(numberOfPlayers, highScore)
+                            if any(score > highScore for score in playerScores):
+                                highScore = max(playerScores)
+                                setHighScore(highScore)
                         else:
                             numberOfPlayers = chooseNumberOfPlayers(subtitleImage, titleImageOne, titleImageTwo,
                                                                     "CONTROLS")
@@ -112,13 +122,19 @@ def startGame(numberOfPlayers, highScore):
     gameOverTextStates = [c.TextStates.NOT_REVEALED for _ in range(numberOfPlayers)]
     levelOrder = getLevelOrder()
     levelIndex = 0
+    levelCount = 41
     while any(player.playerState != c.PlayerStates.DEAD for player in playerList):
         # This loop continues until all players have run out of lives.
         # If levelIndex is greater than the levelOrder list, it resets to index 1
         # Note that this means the level at index 0 is never replayed, while every other level is played in a repeating
         # pattern.
 
-        playLevel(playerList, playerArmList, levelOrder[levelIndex], 0, gameOverTextStates, highScore)
+        if isinstance(levelOrder[levelIndex], BonusLevel):
+            playerList, highScore = playBonusLevel(playerList, playerArmList, levelOrder[levelIndex], levelCount, highScore)
+        else:
+            playerList, highScore = playLevel(playerList, playerArmList, levelOrder[levelIndex], levelCount,
+                                              gameOverTextStates, highScore)
+        levelCount += 1
         levelIndex += 1
         if levelIndex == len(levelOrder):
             levelIndex = 1

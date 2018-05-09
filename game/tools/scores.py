@@ -19,6 +19,7 @@ def getHighScore():
             highScore = int(highScoreFile.read()[-6:])
     except ValueError:
         highScore = 0
+        setHighScore(highScore)
     except FileNotFoundError:
         highScore = 0
         setHighScore(highScore)

@@ -7,14 +7,13 @@ from game.sprites.trap import RubberTrapSprite
 import game.tools.constants as c
 
 
-def setLevelSprites(level, levelCount):
+def setLevelSprites(level):
     """Prepare the sprites for the level. Remove all leftover sprites from the previous level and set the
     coordinates of the item sprites, gold sprites, rubber trap sprites, and black hole sprites for the level
     being played.
 
     Args:
         level: A Level object representing the current level being played.
-        levelCount: An integer storing the current number of levels played this game.
     """
     for group in c.oneLevelOnlyGroups:
         group.empty()
@@ -37,10 +36,16 @@ def setLevelSprites(level, levelCount):
         rubberList.append(RubberTrapSprite())
         rubberList[-1].isHorizontal = True
         rubberList[-1].setCoordinates(-14 + 48 * x, 14 + 48 * y)
+    for (x, y) in level.activeRubberTraps:
+        rubberList.append(RubberTrapSprite())
+        rubberList[-1].isHorizontal = True
+        rubberList[-1].trapState = c.OtherStates.REVEALED
+        rubberList[-1].setCoordinates(-14 + 48 * x, 14 + 48 * y)
+        rubberList[-1].update()
+    BlackHoleSprite.reset()
     c.blackHoleGroup.add(BlackHoleSprite() for _ in range(len(level.blackHolePositions)))
     for (x, y), hole in zip(level.blackHolePositions, c.blackHoleGroup):
         hole.initialize(-1 + 48 * x, 49 + 48 * y)
-    setLevelConstants(levelCount)
 
 
 def setLevelTime(level, levelCount):
@@ -50,7 +55,6 @@ def setLevelTime(level, levelCount):
     this game.
     The first 21 levels follow a particular pattern for how much time is given. Since the boardOneLevel instance
     is never replayed, all following levels follow a 20-step pattern for how much time is given.
-    Is to be called immediately after setLevelSprites, and at no other time.
 
     Args:
         level: A Level object representing the current level being played.
@@ -60,7 +64,7 @@ def setLevelTime(level, levelCount):
         timeCount: An integer representing how much time the players are initially given to complete the level.
     """
     if isinstance(level, BonusLevel):
-        timeCount = 200
+        timeCount = 300
     elif levelCount in range(5, 11) or (levelCount > 21 and levelCount % 20 in range(6, 11)):
         timeCount = 700
     elif levelCount in range(11, 16) or (levelCount > 21 and levelCount % 20 in range(11, 18)):
