@@ -1,8 +1,8 @@
 import pygame as pg
 
 from game.sprites.sprite_sheet import SpriteSheet
-import game.tools.constants as c
 from game.tools.asset_cache import playSound
+import game.tools.constants as c
 
 
 class RubberTrapSprite(pg.sprite.Sprite):

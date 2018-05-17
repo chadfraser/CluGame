@@ -11,7 +11,8 @@ def checkQuitGame():
     if pg.event.peek(pg.QUIT):
         sys.exit()
 
-
+# game.gameplay.player_actions imports checkQuitGame, so we import pauseGame here below that function to prevent the
+# issues of circular importing.
 from game.gameplay.player_actions import pauseGame
 
 
@@ -26,10 +27,10 @@ def checkPauseGame(pausedPlayerNumber):
         pausedPlayerNumber: An integer representing which of the players pauses the game.
             Defaults to 0 if the game is unpaused.
     """
-    if pausedPlayerNumber != 0:
-        # If any player presses the pause button, the pauseGame function is called. After that function ends,
-        # pausedPlayerNumber is set back to 0, to represent the 'unpaused' state.
 
+    # If any player presses the pause button, the pauseGame function is called. After that function ends,
+    # pausedPlayerNumber is set back to 0, to represent the 'unpaused' state.
+    if pausedPlayerNumber != 0:
         pauseGame(pausedPlayerNumber - 1)
         pausedPlayerNumber = 0
     return pausedPlayerNumber
@@ -48,11 +49,10 @@ def checkPauseGameWithInput(playerList):
     for event in pg.event.get():
         if event.type == pg.KEYDOWN:
             for num, player in enumerate(playerList):
+                # Players who have run out of lives cannot pause the game.
+                # After pausing, the queue is cleared to ensure that no keys pressed during the game preparing to pause
+                # take effect while paused.
                 if event.key == controlsDicts[num]["pause"] and player.playerState != c.PlayerStates.DEAD:
-                    # Players who have run out of lives cannot pause the game.
-                    # After pausing, the queue is cleared to ensure that no keys pressed during the game
-                    # preparing to pause take effect while paused.
-
                     pg.mixer.music.pause()
                     playSound("pause_unpause.wav")
                     pauseGame(num)

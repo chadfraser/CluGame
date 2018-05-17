@@ -48,7 +48,8 @@ class DemoSprite(pg.sprite.Sprite):
 
         If the demo player sprite is currently swinging, this sprite's coordinates change based on how they are
         swinging.
-        Otherwise, it changes based on which direction the demo player sprite is facing."""
+        Otherwise, it changes based on which direction the demo player sprite is facing.
+        """
         if DemoPlayerSprite.swingValue != (0, 0):
             self.coordinates = (self.coordinates[0] + DemoPlayerSprite.swingValue[0],
                                 self.coordinates[1] + DemoPlayerSprite.swingValue[1])
@@ -150,10 +151,10 @@ class DemoPlayerSprite(DemoSprite):
     def update(self):
         """Increase frameCount. Depending on frameCount and playerNumber, determine which methods to call."""
         self.frameCount += 1
-        if self.facingDirection in [c.Directions.LEFT, c.Directions.RIGHT]:
-            # The sprite's image changes every 4 frames to create the illusion of animation.
-            # This is overshadowed if one of the below methods changes the sprite's image on the same frame.
 
+        # The sprite's image changes every 4 frames to create the illusion of animation.
+        # This is overshadowed if one of the below methods changes the sprite's image on the same frame.
+        if self.facingDirection in [c.Directions.LEFT, c.Directions.RIGHT]:
             if self.frameCount % 8 < 4:
                 self.image = self.animationFrames[0]
             else:
@@ -173,11 +174,10 @@ class DemoPlayerSprite(DemoSprite):
         else:
             self.playerFourUpdate()
 
+        # The sprite's image flips horizontally if it is facing left, or vertically if it is facing upwards.
+        # This is not triggered if frameCount is 0, since all sprites start on the same coordinates when the demo
+        # animation begins.
         if DemoPlayerSprite.facingDirection == c.Directions.LEFT and 0 < self.frameCount:
-            # The sprite's image flips horizontally if it is facing left, or vertically if it is facing upwards.
-            # This is not triggered if frameCount is 0, since all sprites start on the same coordinates when the
-            # demo animation begins.
-
             self.image = pg.transform.flip(self.image, True, False)
         elif DemoPlayerSprite.facingDirection == c.Directions.UP and 0 < self.frameCount:
             self.image = pg.transform.flip(self.image, False, True)
@@ -389,10 +389,9 @@ class DemoArmSprite(DemoSprite):
             if self.frameCount in [107, 171, 233]:
                 playSound("grab_post_move_end.wav")
 
+        # If demoNumber is 1, this sprite's and coordinates will flip and change based on frameCount to create the
+        # illusion of animation.
         else:
-            # If demoNumber is 1, this sprite's and coordinates will flip and change based on frameCount to
-            # create the illusion of animation.
-
             if 50 < self.frameCount < 150 or 180 < self.frameCount < 215 or 280 < self.frameCount:
                 self.image = self.animationFrames[3]
             elif self.frameCount == 180:
@@ -479,14 +478,13 @@ class DemoGoldSprite(DemoSprite):
                 self.image = self.animationFrames[3]
             else:
                 self.image = self.animationFrames[8]
-        for sprite in c.demoGroup:
-            # If the demo player sprite collides with this sprite, it sets flipping to True
-            # timesFlipped should always be either 0 or 1 during the demo animation, and thus frameCount will be
-            # set to either 0 or 9 (To account for the fact that its image is already in the middle of its
-            # flipping animation).
-            # This is not triggered if frameCount is 0, since all sprites start on the same coordinates when the
-            # demo animation begins.
 
+        # If the demo player sprite collides with this sprite, it sets flipping to True.
+        # timesFlipped should always be either 0 or 1 during the demo animation, and thus frameCount will be set to
+        # either 0 or 9 (To account for the fact that its image is already in the middle of its flipping animation).
+        # This is not triggered if frameCount is 0, since all sprites start on the same coordinates when the demo
+        # animation begins.
+        for sprite in c.demoGroup:
             if isinstance(sprite, DemoPlayerSprite) and self.rect.colliderect(sprite.rect) and\
                     0 < self.frameCount and not self.flipping:
                 playSound("pass_over_gold.wav")

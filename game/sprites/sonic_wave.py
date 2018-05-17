@@ -49,7 +49,7 @@ class SonicWaveSprite(pg.sprite.Sprite):
         """Set the sprite's initial coordinates based on the passed arguments.
 
         Because this sprite should appear a distance in front of the firing player sprite, the exact coordinates
-        are offset by 20 degrees in this sprite's direction.
+        are offset by 20 pixels in this sprite's direction.
 
         Args:
             x: An integer x coordinate to draw the sprite.

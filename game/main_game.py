@@ -3,14 +3,17 @@ import pygame as pg
 from game.gameplay.state import checkQuitGame
 from game.tools import constants as c
 from game.gameplay.title import displayTitleScreen
+import game.tools.window_icon
 
+
+# game.tools.window_icon is imported just to set the window icon.
 
 def main():
     """Set the current score for each player to 0, then run the logic to display the title screen and acknowledge
     player input.
 
-    This code loops, so the groups are emptied and the title screen is displayed again if the players all get a
-    game over.
+    The second part of this code loops, so the groups are emptied and the title screen is displayed again if the
+    players all get a game over.
     """
     currentScores = [0, 0, 0, 0]
 

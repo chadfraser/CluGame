@@ -25,7 +25,6 @@ def animateDemo():
     for demoNum in range(4):
         # Initialize each scene of the demo by setting frameCount to 0, removing all sprites from demoGroup, and
         # resetting the base class variables of the PlayerDemoSprite class.
-
         frameCount = 0
         c.demoGroup.empty()
         d_sprite.initialize()
@@ -33,10 +32,9 @@ def animateDemo():
         pg.display.update()
 
         createDemoSprites(demoNum, displayRects)
-
         alphaKey = 255
-        # Each scene of the demo animation is 600 frames long.
 
+        # Each scene of the demo animation is 600 frames long.
         while frameCount < 600:
             checkQuitGame()
             for event in pg.event.get():
@@ -46,13 +44,13 @@ def animateDemo():
                         c.SCREEN.fill(c.BLACK)
                         return
             frameCount += 1
+
             # Only the sprites inside of the display rect are visible.
             # The display rect moves from off of one edge of the screen towards the either side for 104 frames.
             # Every sprite moves this amount in addition to their regular movement, to create the illusion of them
             # moving with the display.
             # A grey rect stays against one side of the display rect to cover up every sprite that moves past the edge
             # of the display rect.
-
             if frameCount < 105:
                 displayRects[demoNum].topleft = [displayRects[demoNum].topleft[0] + spriteCoords[demoNum][0],
                                                  displayRects[demoNum].topleft[1] + spriteCoords[demoNum][1]]
@@ -68,10 +66,9 @@ def animateDemo():
                     sprite.coordinates = (sprite.coordinates[0] + spriteCoords[demoNum][0],
                                           sprite.coordinates[1] + spriteCoords[demoNum][1])
 
+            # For the first 328 frames, the sprites are all animated and move as desired, with the player sprite
+            # constantly staying in the middle of the display rect.
             if frameCount < 328:
-                # For the first 328 frames, the sprites are all animated and move as desired, with the player sprite
-                # constantly staying in the middle of the display rect.
-
                 pg.draw.rect(c.SCREEN, c.BLACK, displayRects[demoNum])
                 for sprite in c.demoGroup:
                     sprite.setCoordinates()
@@ -81,12 +78,11 @@ def animateDemo():
                 pg.display.update(coverRect)
                 pg.display.update(displayRects[demoNum])
 
+            # On the 328th frame, all sprites stop moving. Any sprite that has a monochrome image variant switches to
+            # that image.
+            # The name display and player character's name appears as well, but they are hidden by the screen being
+            # covered by a white rect in the following conditional statement.
             elif frameCount == 328:
-                # On the 328th frame, all sprites stop moving. Any sprite that has a monochrome image variant switches
-                # to that image.
-                # The name display and player character's name appears as well, but they are hidden by the screen
-                # being covered by a white rect in the following conditional statement.
-
                 playSound("item_appears_or_collected.wav")
                 demoNameBlock = d_sprite.DemoNameDisplay(demoNum, (nameRects[demoNum].left, nameRects[demoNum].top))
                 for sprite in c.demoGroup:
@@ -97,7 +93,6 @@ def animateDemo():
                 # the display rect are covered up.
                 # The flashScreen function is called every frame, gradually decreasing the visibility of the white rect
                 # covering the screen.
-
                 c.SCREEN.fill(c.GREY)
                 pg.draw.rect(c.SCREEN, c.BLACK, displayRects[demoNum])
                 for sprite in c.demoGroup:

@@ -1,7 +1,7 @@
 import pygame as pg
 
-import game.tools.constants as c
 from game.tools.asset_cache import getImage
+import game.tools.constants as c
 
 
 class SpriteSheet:

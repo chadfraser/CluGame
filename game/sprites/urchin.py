@@ -4,8 +4,8 @@ import sys
 
 from game.sprites.player import PlayerSprite
 from game.sprites.sprite_sheet import SpriteSheet
-import game.tools.constants as c
 from game.tools.asset_cache import playSound
+import game.tools.constants as c
 
 
 class UrchinSprite(pg.sprite.Sprite):
@@ -67,7 +67,6 @@ class UrchinSprite(pg.sprite.Sprite):
         # xValue is used to prevent repetition, as we need to call getStripImages three times in total with very
         # similar arguments, differing only by xValue each time, and only by 34 each time.
         # In this case, we want (0, 0, 34, 34); (0, 34, 34, 34); (0, 68, 34, 34)
-
         xValue = 0
         for key in self.imageDictKeys:
             stripImages = spriteSheet.getStripImages(0, xValue, 34, 34)
@@ -146,21 +145,20 @@ class UrchinSprite(pg.sprite.Sprite):
     def update(self):
         """Increase frameCount. Depending on frameCount and playerState, determines which methods to call."""
         self.frameCount += 1
+
         # The sprite always checks collision with other objects each frame that it updates.
         # The priority of these collision checks are:
         #   1. Sonic wave sprites.
         #   2. Other urchin sprites, if the urchin's color is BLUE (i.e., active).
-
         self.checkSonicWaveCollision()
         self.checkOtherUrchinCollision()
 
+        # If the urchin is in a small ball state and BLUE, it changes to a regular ball state after 5 frames.
+        # After doing this 8 times total, it changes to a moving state.
+        # If the urchin is YELLOW, it spends 32 frames fully in this state, then changes to a regular ball state after
+        # 5 frames.
+        # After changing states on this 84 times total, it changes its color to BLUE.
         if self.enemyState == c.EnemyStates.SMALL_BALL:
-            # If the urchin is in a small ball state and BLUE, it changes to a regular ball state after 5 frames.
-            # After doing this 8 times total, it changes to a moving state.
-            # If the urchin is YELLOW, it spends 32 frames fully in this state, then changes to a regular ball state
-            # after 5 frames.
-            # After changing states on this 84 times total, it changes its color to BLUE.
-
             if self.color == c.BLUE and self.frameCount % 5 == 0:
                 if self.animationCount < 8:
                     self.changeImage("ball", 0)
@@ -183,10 +181,10 @@ class UrchinSprite(pg.sprite.Sprite):
                     self.enemyState = c.EnemyStates.BALL
                     self.frameCount = 0
                     self.animationCount += 1
-        elif self.enemyState == c.EnemyStates.BALL:
-            # The urchin's BALL state is almost identical to SMALL_BALL, except it spends less time in this state.
-            # It spends only 3 frames in this state, as opposed to the 5 frames spent in the small ball state.
 
+        # The urchin's BALL state is almost identical to SMALL_BALL, except it spends less time in this state.
+        # It spends only 3 frames in this state, as opposed to the 5 frames spent in the small ball state.
+        elif self.enemyState == c.EnemyStates.BALL:
             if self.color == c.BLUE and self.frameCount % 3 == 0:
                 self.changeImage("ball", 1)
                 self.enemyState = c.EnemyStates.SMALL_BALL
@@ -203,14 +201,14 @@ class UrchinSprite(pg.sprite.Sprite):
                     self.enemyState = c.EnemyStates.SMALL_BALL
                     self.frameCount = 0
                     self.animationCount += 1
-        elif self.enemyState == c.EnemyStates.MOVING:
-            # If the sprite's color is BLUE, first it's checked if the sprite is at an intersection.
-            # If so, running is set to False and the sprite randomly chooses its next action.
-            # The sprite only moves every second frame. It does not move if the class is currently frozen by an
-            # ItemClock sprite.
-            # If the sprite is YELLOW, it spends 32 frames in this state before changing to the ball state.
-            # Animation count is set to 1 to account for the 32 frames the sprite has already waited.
 
+        # If the sprite's color is BLUE, first it's checked if the sprite is at an intersection.
+        # If so, running is set to False and the sprite randomly chooses its next action.
+        # The sprite only moves every second frame. It does not move if the class is currently frozen by an ItemClock
+        # sprite.
+        # If the sprite is YELLOW, it spends 32 frames in this state before changing to the ball state.
+        # Animation count is set to 1 to account for the 32 frames the sprite has already waited.
+        elif self.enemyState == c.EnemyStates.MOVING:
             if self.color == c.BLUE:
                 if self.rect.center[0] % 48 == 16 and self.rect.center[1] % 48 == 18:
                     self.running = False
@@ -218,11 +216,6 @@ class UrchinSprite(pg.sprite.Sprite):
                 self.animateMovement()
                 if self.frameCount % 2 == 0 and not UrchinSprite.isFrozen:
                     self.moveSprite()
-                if self.frameCount % 480 == 0:
-                    # All methods that rely on frameCount do so in factors of 480. To keep frameCount from increasing
-                    # without bounds, it resets to 0 every 480 frames.
-
-                    self.frameCount = 0
             elif self.frameCount > 32:
                 self.changeImage("ball", 0)
                 self.enemyState = c.EnemyStates.BALL
@@ -231,13 +224,13 @@ class UrchinSprite(pg.sprite.Sprite):
             self.animateMovement()
             if not UrchinSprite.isFrozen:
                 self.moveSprite()
-        elif self.enemyState == c.EnemyStates.EXPLODING:
-            # The sprite's image changes every 5 frames.
-            # It uses the "ball" imageKey for the first 10 frames to create the illusion of the sprite getting smaller,
-            # then uses the "death" imageKey.
-            # On the 25th frame, the sprite's image is replaced with the emptyImage. Then on the 30th frame, it is
-            # replaced with the fourth image in the "death" imageKey list, and its state is changed to OFF_SCREEN.
 
+        # The sprite's image changes every 5 frames.
+        # It uses the "ball" imageKey for the first 10 frames to create the illusion of the sprite getting smaller,
+        # then uses the "death" imageKey.
+        # On the 25th frame, the sprite's image is replaced with the emptyImage. Then on the 30th frame, it is
+        # replaced with the fourth image in the "death" imageKey list, and its state is changed to OFF_SCREEN.
+        elif self.enemyState == c.EnemyStates.EXPLODING:
             if self.frameCount % 30 > 24:
                 self.image = self.emptyImage
             else:
@@ -258,6 +251,11 @@ class UrchinSprite(pg.sprite.Sprite):
         elif self.enemyState == c.EnemyStates.OFF_SCREEN:
             if self.frameCount % 32 == 0:
                 self.kill()
+
+        # All methods that rely on frameCount do so in factors of 480. To keep frameCount from increasing
+        # without bounds, it resets to 0 every 480 frames.
+        if self.frameCount % 480 == 0:
+            self.frameCount = 0
         self.flipImage()
         self.image.set_colorkey(c.BLACK)
 
@@ -266,7 +264,8 @@ class UrchinSprite(pg.sprite.Sprite):
 
         If the enemy chooses to wait, there's a 50% chance it will wait for 20 frames, and a 17% chance that it
         will wait for 40, 60, or 80 frames each.
-        The sprite will not change its direction while it is frozen."""
+        The sprite will not change its direction while it is frozen.
+        """
         randomValue = random.randint(0, 40)
         if randomValue < 2:
             self.frameCount = 0
@@ -280,7 +279,7 @@ class UrchinSprite(pg.sprite.Sprite):
     def moveSprite(self, moveVal=2):
         """Move the sprite's coordinates according to moveVal, in the direction they are facing.
 
-        If the sprite is running, its speed is doubled
+        If the sprite is running, its speed is doubled.
 
         If the sprite crosses over the left or right edge of the screen, they reappear at the opposite edge.
         Crossing over the upper or lower edge of the screen should not be possible. If it were to happen, another

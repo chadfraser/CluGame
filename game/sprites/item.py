@@ -5,8 +5,8 @@ from game.gameplay.level import BonusLevel
 from game.sprites.player import PlayerSprite
 from game.sprites.sprite_sheet import SpriteSheet
 from game.sprites.urchin import UrchinSprite
-import game.tools.constants as c
 from game.tools.asset_cache import playSound
+import game.tools.constants as c
 
 
 class Item(pg.sprite.Sprite):
@@ -22,7 +22,7 @@ class Item(pg.sprite.Sprite):
             spriteSheet: The SpriteSheet object for the item sprite sheet image.
             animationFrames: A list of 16 Surface objects from the SpriteSheet object
             coordinates: A tuple location to blit the sprite on the screen.
-            itemState: An OtherStatess Enum instance of the current state of the sprite.
+            itemState: An OtherStates Enum instance of the current state of the sprite.
                 Used to determine which methods get called and when.
             collectingPlayer: An instance of the PlayerSprite class that collects this item.
                 Is a None type variable until the item is collected.
@@ -73,6 +73,7 @@ class Item(pg.sprite.Sprite):
         self.setCoordinates(0, 0)
         self.triggerRect.topleft = (0, 0)
         self.itemState = c.OtherStates.DEAD
+        self.frameCount = 0
 
     def initialize(self, x, y, triggerX, triggerY):
         """Set the sprite's coordinates and triggerRect's coordinates using the passed arguments.
@@ -133,7 +134,7 @@ class MinorItem(Item):
         """Init MinorItemSprite.
 
         Instance variables:
-            baseImage: The image that the sprite will change to once it's been revealed.
+            baseImage: The image that the sprite will change to once it has been revealed.
         """
         super().__init__()
         self.baseImage = self.imageDict[imageKey]

@@ -40,7 +40,7 @@ class BlackHoleSprite(pg.sprite.Sprite):
             animationFrames: A list of 4 Surface objects from the SpriteSheet object.
             coordinates: A tuple location to blit the sprite on the screen.
             frameCount: An integer that increases whenever the update method is called.
-            animationCount: An integer tracking from where in animationFrame the sprite should take its next
+            animationCount: An integer tracking from where in animationFrames the sprite should take its next
                 image.
             image: The current image to be drawn for the sprite.
                 Defaults to the first Surface object in animationFrames.
@@ -59,6 +59,7 @@ class BlackHoleSprite(pg.sprite.Sprite):
 
     @classmethod
     def reset(cls):
+        """Reset two of the class variables to their proper initial values."""
         cls.blackHolesList = []
         cls.blackHoleToSpawn = None
 

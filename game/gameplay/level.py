@@ -350,8 +350,7 @@ class BonusLevel(Level):
 
 
 # Create an instance of each of the 41 different level patterns. This ensures that there is exactly one copy of each
-# level pattern at all times, with the proper gold tiles and rubber trap tiles.
-
+# level pattern at all times, with the gold tiles and rubber trap tiles in the proper locations.
 HEART = BoardOneLevel([], [(4, 3), (7, 3)],
                       [(3, 1), (4, 1), (6, 1), (7, 1), (2, 2), (5, 2), (8, 2), (2, 4), (8, 4), (3, 5), (7, 5), (4, 6),
                        (6, 6), (5, 7)],
@@ -391,6 +390,7 @@ KOOPA = BoardOneLevel([], [(7, 4)],
                        (7, 6), (3, 7), (7, 7)],
                       [(3, 1), (4, 1), (2, 2), (4, 2), (5, 2), (7, 2), (3, 3), (4, 3), (8, 3), (3, 4), (4, 4), (8, 4),
                        (3, 5), (8, 5), (4, 6), (7, 6)])
+
 CLOWN = BoardTwoLevel([(5, 2)], [(4, 6), (7, 6)],
                       [(3, 2), (7, 2), (2, 3), (4, 3), (6, 3), (8, 3), (2, 4), (4, 4), (6, 4), (8, 4), (3, 5), (5, 5),
                        (7, 5), (5, 7)],
@@ -430,6 +430,7 @@ SKULL = BoardTwoLevel([(5, 7)], [],
                        (5, 5), (7, 5), (4, 6), (5, 6), (6, 6), (3, 7), (7, 7)],
                       [(3, 1), (8, 1), (3, 2), (5, 2), (6, 2), (8, 2), (3, 3), (8, 3), (5, 4), (6, 4), (4, 5), (7, 5),
                        (4, 6), (7, 6)])
+
 SUBMARINE = BoardThreeLevel([], [(3, 1), (8, 1)],
                             [(4, 3), (5, 3), (8, 3), (2, 4), (3, 4), (4, 4), (5, 4), (6, 4), (7, 4), (8, 4), (7, 5),
                              (8, 5), (2, 6), (3, 6), (4, 6), (5, 6), (6, 6), (8, 6)],
@@ -454,7 +455,8 @@ FISH = BoardThreeLevel([(2, 1), (8, 1), (7, 5)], [],
                        [(2, 2), (3, 2), (6, 2), (9, 2), (2, 3), (4, 3), (6, 3), (8, 3), (9, 3), (2, 4), (5, 4), (9, 4),
                         (2, 5), (4, 5), (6, 5), (9, 5), (2, 6), (3, 6)])
 CLU_CLU = BoardThreeLevel([], [(8, 3), (3, 4)],
-                          [(2, 1), (8, 1), (8, 2), (2, 3), (4, 3), (6, 3), (4, 4), (2, 6), (4, 6), (6, 6), (8, 6)],
+                          [(2, 1), (8, 1), (8, 2), (2, 3), (4, 3), (6, 3), (4, 4), (2, 6), (4, 6), (6, 6), (8, 6),
+                           (2, 7)],
                           [(2, 1), (8, 1), (9, 1), (2, 2), (4, 2), (6, 2), (7, 2), (4, 4), (4, 5), (6, 5), (8, 5),
                            (9, 5), (2, 6), (3, 6)])
 CROWN = BoardThreeLevel([(2, 7), (8, 7)], [(4, 2), (7, 2)],
@@ -467,6 +469,7 @@ SWORD_SHIELD = BoardThreeLevel([(7, 4), (2, 7), (8, 7)], [(2, 1)],
                                 (7, 6)],
                                [(3, 2), (4, 2), (3, 3), (4, 3), (6, 3), (9, 3), (3, 4), (4, 4), (6, 4), (9, 4), (3, 5),
                                 (4, 5), (7, 5), (8, 5)])
+
 HOLE = BoardFourLevel([(3, 3), (7, 3)], [(4, 4), (7, 4)],
                       [(3, 1), (7, 1), (3, 2), (7, 2), (5, 3), (2, 4), (5, 4), (8, 4), (2, 5), (5, 5), (8, 5), (3, 6),
                        (7, 6), (3, 7), (7, 7)],
@@ -506,6 +509,7 @@ FLIP = BoardFourLevel([(7, 2), (5, 3), (3, 6)], [],
                       [(2, 1), (2, 2), (3, 2), (7, 3), (5, 4), (3, 5), (5, 5), (7, 6), (8, 6), (8, 7)],
                       [(2, 1), (3, 1), (9, 1), (3, 2), (4, 2), (9, 2), (3, 3), (4, 3), (7, 3), (8, 3), (3, 4), (4, 4),
                        (5, 4), (6, 4), (7, 4), (8, 4), (2, 5), (7, 5), (8, 5), (2, 6), (8, 6), (9, 6)])
+
 SPIDER = BoardFiveLevel([(3, 4), (7, 4)], [(1, 2), (4, 2), (7, 2), (4, 5), (7, 5), (10, 5)],
                         [(2, 1), (8, 1), (5, 2), (2, 3), (8, 3), (2, 5), (8, 5), (5, 6), (2, 7), (8, 7)],
                         [(3, 1), (8, 1), (2, 2), (9, 2), (5, 3), (6, 3), (5, 4), (6, 4), (2, 5), (9, 5), (3, 6),
@@ -547,7 +551,7 @@ boardThreeLevels = [SUBMARINE, GLASSES, KOALA, BUTTERFLY, FISH, CLU_CLU, CROWN, 
 boardFourLevels = [HOLE, KEY, RIBBON, LETTER_H, PUNCTUATION, FROWN, PYTHON, FLIP]
 boardFiveLevels = [SPIDER, LETTER_X, BOX, DIAMOND, INVERTED_DIAMOND, BOX_PLUS, CRUSHER, KEY_PLUS]
 
-allBoardsPastOneList = [boardTwoLevels, boardThreeLevels, boardFourLevels, boardFiveLevels]
+listOfAllBoardsPastOne = [boardTwoLevels, boardThreeLevels, boardFourLevels, boardFiveLevels]
 
 
 def getLevelOrder():
@@ -562,14 +566,14 @@ def getLevelOrder():
                        boardTwoLevel, boardThreeLevel, boardFourLevel, boardFiveLevel, BonusLevel
 
     Returns:
-        A list of Level objects in the order to be played.
+        newLevelOrder: A list of Level objects in the order to be played.
     """
     random.shuffle(boardOneLevels)
     newLevelOrder = [boardOneLevels[0]]
-    for boardList in allBoardsPastOneList:
+    for boardList in listOfAllBoardsPastOne:
         random.shuffle(boardList)
     for num in range(4):
-        for boardList in allBoardsPastOneList:
+        for boardList in listOfAllBoardsPastOne:
             newLevelOrder.append(boardList[num])
         newLevelOrder.append(BONUS_LEVEL)
     return newLevelOrder

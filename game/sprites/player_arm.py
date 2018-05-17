@@ -1,7 +1,7 @@
 import pygame as pg
 
-import game.tools.constants as c
 from game.sprites.player import PlayerSprite
+import game.tools.constants as c
 from game.tools.asset_cache import playSound
 
 
@@ -226,7 +226,6 @@ class PlayerArmSprite(pg.sprite.Sprite):
                 self.playerBody.isFrozen:
             if self.collisionRect[0] % 48 in range(34, 39) and self.collisionRect[1] % 48 in range(34, 39) and \
                                     30 < self.collisionRect[0] < 500 and 20 < self.collisionRect[1] < 500:
-                """CHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAANG"""
                 playSound("grab_post_move_end.wav")
                 self.armState = c.ArmStates.SWINGING
                 self.playerBody.playerState = c.PlayerStates.SWINGING

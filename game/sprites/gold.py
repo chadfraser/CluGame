@@ -4,12 +4,12 @@ from game.gameplay.level import BonusLevel
 from game.sprites.sprite_sheet import SpriteSheet
 from game.sprites.player import PlayerSprite
 from game.sprites.text import PointsSprite
-import game.tools.constants as c
 from game.tools.asset_cache import playSound
+import game.tools.constants as c
 
 
 class GoldSprite(pg.sprite.Sprite):
-    """Create a sprite of the urchin enemy.
+    """Create a sprite of the gold item.
 
     Class variables:
         levelCount: An integer storing how many levels the player has currently played.
@@ -103,19 +103,19 @@ class GoldSprite(pg.sprite.Sprite):
     def update(self):
         """Increase frameCount. Depending on frameCount and playerState, determines which methods to call."""
         self.frameCount += 1
-        if self.goldState == c.OtherStates.REVEALED:
-            # If the sprite's state is REVEALED, it flashes every 6 frames.
-            # This uses the globalFrameCount so the revealed gold sprites all flash in sync.
-            # It sets its default image to its fourth animation frame.
 
+        # If the sprite's state is REVEALED, it flashes every 6 frames.
+        # This uses the globalFrameCount so the revealed gold sprites all flash in sync.
+        # It sets its default image to its fourth animation frame.
+        if self.goldState == c.OtherStates.REVEALED:
             if GoldSprite.globalFrameCount % 12 < 6:
                 self.image = self.animationFrames[3]
             else:
                 self.image = self.flashImage
             self.animationCount = 3
-        elif self.goldState == c.OtherStates.UPSIDE_DOWN:
-            # If the sprite's state is UPSIDE_DOWN, sets its default image is its eighth animation frame.
 
+        # If the sprite's state is UPSIDE_DOWN, sets its default image is its eighth animation frame.
+        elif self.goldState == c.OtherStates.UPSIDE_DOWN:
             self.image = self.animationFrames[7]
             self.animationCount = 7
         elif self.goldState == c.OtherStates.FLIPPING_UP:
@@ -130,24 +130,24 @@ class GoldSprite(pg.sprite.Sprite):
             else:
                 self.image = self.flashImage
             self.animationCount = 3
-            if self.frameCount % 10 == 0:
-                # Gold stays in the delayed state for 10 frames after being flipped to prevent it from flipping again
-                # too quickly
 
+            # Gold stays in the delayed state for 10 frames after being flipped to prevent it from flipping again too
+            # quickly
+            if self.frameCount % 10 == 0:
                 self.goldState = c.OtherStates.REVEALED
         elif self.goldState == c.OtherStates.DELAYED_DOWN:
             self.image = self.animationFrames[7]
             if self.frameCount % 10 == 0:
                 self.goldState = c.OtherStates.UPSIDE_DOWN
+
+        # All methods that rely on frameCount do so in factors of 360. To keep frameCount from increasing without
+        # bounds, it resets to 0 every 360 frames.
         if self.frameCount % 360 == 0:
-            # All methods that rely on frameCount do so in factors of 360. To keep frameCount from increasing without
-            # bounds, it resets to 0 every 360 frames.
-
             self.frameCount = 0
-        if GoldSprite.globalFrameCount % 12 == 0:
-            # Because the globalFrameCount is only relevant in terms of its value mod 12, its resets every 12 frames to
-            # keep it from increasing without bounds.
 
+        # Because the globalFrameCount is only relevant in terms of its value mod 12, its resets every 12 frames to
+        # keep it from increasing without bounds.
+        if GoldSprite.globalFrameCount % 12 == 0:
             GoldSprite.globalFrameCount = 0
         self.rotateImage()
         self.image.set_colorkey(c.BLACK)

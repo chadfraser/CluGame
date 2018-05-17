@@ -3,7 +3,7 @@ import sys
 
 from game.demo.demo import animateDemo
 from game.gameplay.menu import chooseNumberOfPlayers, displayChangeControlMenu
-from game.gameplay.play_level import playBonusLevel, playLevel
+from game.gameplay.play_level import playLevel
 from game.gameplay.level import BonusLevel, getLevelOrder
 from game.gameplay.state import checkQuitGame
 from game.sprites.title import TitleBoxSprite, TitleTextSprite
@@ -18,14 +18,8 @@ def displayTitleScreen(playerScores=None):
     """Display the title screen, including all players' current scores and the recorded high score.
 
     Args:
-        playerOneScore: An integer representing the most recent score earned by player one.
-            Defaults to 0.
-        playerTwoScore: An integer representing the most recent score earned by player two.
-            Defaults to 0.
-        playerThreeScore: An integer representing the most recent score earned by player three.
-            Defaults to 0.
-        playerFourScore: An integer representing the most recent score earned by player four.
-            Defaults to 0.
+        playerScores: A list of four integers representing the most recent score earned by each player.
+            Defaults to [0, 0, 0, 0].
     """
     if playerScores is None:
         playerScores = [0, 0, 0, 0]
@@ -40,15 +34,14 @@ def displayTitleScreen(playerScores=None):
     changeText = c.FONT.render("CHANGE CONTROLS", False, c.CYAN)
     cursorText = c.FONT.render(">", False, c.ORANGE)
 
+    # If the player does not select an option within 740 frames, the demo is animated. After the demo, or after the
+    # player has made a selection, looping is set to False so this loop resets the music, frameCount, cursor location,
+    # and title images
     while True:
-        # If the player does not select an option within 740 frames, the demo is animated. After the demo, or after the
-        # player has made a selection, looping is set to False so this loop resets the music, frameCount, cursor
-        # location, and title images
-
         highScoreText = c.FONT.render("TOP,{:06d}".format(highScore), False, c.PINK)
+
         # Note that this font is designed so the symbols "~", "{", and "}" form the roman numerals for 2, 3, and 4
         # respectively.
-
         playerScoreTexts = [c.FONT.render("I,{:06d}".format(playerScores[0]), False, c.WHITE),
                             c.FONT.render("~,{:06d}".format(playerScores[1]), False, c.WHITE),
                             c.FONT.render("{{,{:06d}".format(playerScores[2]), False, c.WHITE),
@@ -112,6 +105,7 @@ def startGame(numberOfPlayers, highScore):
     Args:
         numberOfPlayers: An integer showing how many players will play the game.
         highScore: An integer showing the current high score.
+
     Returns:
         playerScoresList: A list of the most recent score for each of the four players, set to 0 if that player
             didn't play this game.
@@ -122,18 +116,15 @@ def startGame(numberOfPlayers, highScore):
     gameOverTextStates = [c.TextStates.NOT_REVEALED for _ in range(numberOfPlayers)]
     levelOrder = getLevelOrder()
     levelIndex = 0
-    levelCount = 41
-    while any(player.playerState != c.PlayerStates.DEAD for player in playerList):
-        # This loop continues until all players have run out of lives.
-        # If levelIndex is greater than the levelOrder list, it resets to index 1
-        # Note that this means the level at index 0 is never replayed, while every other level is played in a repeating
-        # pattern.
+    levelCount = 1
 
-        if isinstance(levelOrder[levelIndex], BonusLevel):
-            playerList, highScore = playBonusLevel(playerList, playerArmList, levelOrder[levelIndex], levelCount, highScore)
-        else:
-            playerList, highScore = playLevel(playerList, playerArmList, levelOrder[levelIndex], levelCount,
-                                              gameOverTextStates, highScore)
+    # This loop continues until all players have run out of lives.
+    # If levelIndex is greater than the levelOrder list, it resets to index 1
+    # Note that this means the level at index 0 is never replayed, while every other level is played in a repeating
+    # pattern.
+    while any(player.playerState != c.PlayerStates.DEAD for player in playerList):
+        playerList, highScore = playLevel(playerList, playerArmList, levelOrder[levelIndex], levelCount,
+                                          gameOverTextStates, highScore)
         levelCount += 1
         levelIndex += 1
         if levelIndex == len(levelOrder):

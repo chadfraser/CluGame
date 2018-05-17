@@ -243,9 +243,8 @@ class PlayerSprite(pg.sprite.Sprite):
         self.checkOtherPlayerCollision()
         self.frameCount += 1
 
+        # If the player is in a ball state, it flashes every 8 frames (unless it is frozen).
         if self.playerState == c.PlayerStates.BALL:
-            # If the player is in a ball state, it flashes every 8 frames (unless it is frozen).
-
             if self.frameCount % 16 < 8 and not self.isFrozen:
                 self.changeImage("ball", 0)
             else:
@@ -253,12 +252,13 @@ class PlayerSprite(pg.sprite.Sprite):
         elif self.playerState == c.PlayerStates.MOVING:
             self.moveSprite()
             self.animateMovement()
-        elif self.playerState == c.PlayerStates.FINISHED_SWINGING:
-            # If the player has finished swinging within the past 16 frames without being frozen, and is not facing the
-            # same direction as when they began moving, they are put in the FINISHED_SWINGING state.
-            # This is identical to the MOVING state, except that they ignore collision with black hole sprites while in
-            # this state.
 
+        # If the player has finished swinging within the past 16 frames without being frozen, and is not facing the
+        # same direction as when they began moving, they are put in the FINISHED_SWINGING state.
+        # This is identical to the MOVING state, except that they ignore collision with black hole sprites while in
+        # this state.
+        # This allows players to swing across a black hole without falling into it.
+        elif self.playerState == c.PlayerStates.FINISHED_SWINGING:
             self.moveSprite()
             self.animateMovement()
             if self.frameCount % 10 == 0 and not self.isFrozen:
@@ -269,12 +269,12 @@ class PlayerSprite(pg.sprite.Sprite):
         elif self.playerState == c.PlayerStates.HITTING_PLAYER_MOVING or\
                 self.playerState == c.PlayerStates.HITTING_PLAYER_SWINGING:
             self.bounceOffOfPlayer()
-        elif self.playerState == c.PlayerStates.HITTING_WALL:
-            # The player sprite spends 9 frames animating being squished against the wall.
-            # It rebounds afterwards, changing direction and then begins to move.
-            # After 9 frames, if it not frozen, it checks if it is no longer colliding with any of the level boundary's
-            # rects. If not, it enters the MOVING state again.
 
+        # The player sprite spends 9 frames animating being squished against the wall.
+        # It rebounds afterwards, changing direction and then begins to move.
+        # After 9 frames, if it not frozen, it checks if it is no longer colliding with any of the level boundary's
+        # rects. If not, it enters the MOVING state again.
+        elif self.playerState == c.PlayerStates.HITTING_WALL:
             if self.frameCount == 4:
                 self.changeImage("squish", 1)
             elif 4 < self.frameCount < 9:
@@ -289,13 +289,13 @@ class PlayerSprite(pg.sprite.Sprite):
                     self.frameCount = 0
                     self.playerState = c.PlayerStates.MOVING
                     self.bouncingOffWall = False
-        elif self.playerState in [c.PlayerStates.FALLING, c.PlayerStates.EXPLODING]:
-            # The sprite's image changes every 8 frames.
-            # It uses the "death" imageKey if the player is in the EXPLODING state, and the "fall" imageKey if the
-            # player is in the FALLING state.
-            # After 40 total frames, the player enters the OFF_SCREEN state and their image is replaced with the
-            # emptyImage.
 
+        # The sprite's image changes every 8 frames.
+        # It uses the "death" imageKey if the player is in the EXPLODING state, and the "fall" imageKey if the player
+        # is in the FALLING state.
+        # After 40 total frames, the player enters the OFF_SCREEN state and their image is replaced with the
+        # emptyImage.
+        elif self.playerState in [c.PlayerStates.FALLING, c.PlayerStates.EXPLODING]:
             imageKey = "death"
             if self.playerState == c.PlayerStates.FALLING:
                 imageKey = "fall"
@@ -305,12 +305,12 @@ class PlayerSprite(pg.sprite.Sprite):
                 self.frameCount = 0
                 self.playerState = c.PlayerStates.OFF_SCREEN
                 self.image = self.emptyImage
-        elif self.playerState == c.PlayerStates.OFF_SCREEN:
-            # After 160 frames of being off-screen, the player is respawned at its baseCoordinates location, at the
-            # cost of one life.
-            # If the player has no lives left, they permanently enter the DEAD state.
-            # A sprite in the DEAD state never meaningfully updates, except during the end-of-level animations.
 
+        # After 160 frames of being off-screen, the player is respawned at its baseCoordinates location, at the cost of
+        # one life.
+        # If the player has no lives left, they permanently enter the DEAD state.
+        # A sprite in the DEAD state never meaningfully updates, except during the end-of-level animations.
+        elif self.playerState == c.PlayerStates.OFF_SCREEN:
             if self.lives > 0 and self.frameCount % 160 == 0:
                 self.setCoordinates(self.baseCoordinates[0], self.baseCoordinates[1])
                 self.putSpriteInBall()
@@ -320,16 +320,15 @@ class PlayerSprite(pg.sprite.Sprite):
         elif self.playerState == c.PlayerStates.LEVEL_END:
             self.animateLevelEnd()
 
+        # Every time the sprite updates, if it is currently bouncing off of another player, it checks whether or not
+        # these sprites are still colliding. If not, it sets the bouncingOffPlayer boolean to False.
+        # Below, it also does runs the same check if it is currently bouncing off of any of the level boundary's
+        # rects.
         if self.bouncingOffPlayer:
-            # Every time the sprite updates, if it is currently bouncing off of another player, it checks whether or
-            # not these sprites are still colliding. If not, it sets the bouncingOffPlayer boolean to False.
-            # Below, it also does runs the same check if it is currently bouncing off of any of the level boundary's
-            # rects.
 
             # otherPlayers is all other player sprites that are in one of the three moving states.
             # Players in any other states are ignored, as either not considered to be 'active' (Such as BALL, FALLING,
             # or DEAD) or else are already in the process of bouncing off of an object (Such as HITTING_WALL).
-
             otherPlayers = [player for player in c.playerGroup if (player != self and
                             player.playerState in [c.PlayerStates.MOVING, c.PlayerStates.SWINGING,
                                                    c.PlayerStates.FINISHED_SWINGING])]
@@ -339,10 +338,9 @@ class PlayerSprite(pg.sprite.Sprite):
             if not any(self.rect.colliderect(levelRect) for levelRect in PlayerSprite.currentLevel.levelBorderRects):
                 self.bouncingOffWall = False
 
+        # All methods that rely on frameCount do so in factors of 240. To keep frameCount from increasing without
+        # bounds, it resets to 0 every 240 frames.
         if self.frameCount % 240 == 0:
-            # All methods that rely on frameCount do so in factors of 240. To keep frameCount from increasing without
-            # bounds, it resets to 0 every 240 frames.
-
             self.frameCount = 0
         self.flipImage()
         self.image.set_colorkey(c.BLACK)
@@ -411,8 +409,8 @@ class PlayerSprite(pg.sprite.Sprite):
                 if self.rect.left > 512:
                     self.setCoordinates(-48, self.coordinates[1])
             for gold in c.goldGroup:
-                # This does not call the startFlipAnimation method if the gold sprite is currently flipping up or down.
 
+                # This does not call the startFlipAnimation method if the gold sprite is currently flipping up or down.
                 if gold.collisionRect.collidepoint(self.rect.center) and gold.goldState in\
                         [c.OtherStates.OFF_SCREEN, c.OtherStates.REVEALED, c.OtherStates.UPSIDE_DOWN]:
                     gold.passingDirection = self.facingDirection
@@ -587,7 +585,7 @@ class PlayerSprite(pg.sprite.Sprite):
         If the player is in any 'inactive' states (Such as BALL, FALLING, or OFF_SCREEN), this method is ignored.
         Otherwise, if the player collides with a blue (i.e., active) enemy sprite, they enter the EXPLODING
         state.
-        If they collide with a yellow enemy sprite, the enemy sprite is pushed.
+        If they collide with a yellow (i.e., stunned) enemy sprite, the enemy sprite is pushed.
         """
         if self.playerState in [c.PlayerStates.MOVING, c.PlayerStates.SWINGING, c.PlayerStates.FINISHED_SWINGING,
                                 c.PlayerStates.HITTING_WALL, c.PlayerStates.HITTING_PLAYER_MOVING,
@@ -691,9 +689,9 @@ class PlayerSprite(pg.sprite.Sprite):
         self.image = self.imageDict["end"][0]
         if (self.frameCount - 1) % 32 > 15:
             self.flipImage()
-        if self.frameCount % 16 == 1 and self.playerNumber == 1:
-            # Only player one makes noise during the level end, to prevent overlapping sound effects
 
+        # Only player one makes noise during the level end, to prevent overlapping sound effects
+        if self.frameCount % 16 == 1 and self.playerNumber == 1:
             playSound("grab_post_move_end.wav")
 
     def setLevelEndCountImage(self):

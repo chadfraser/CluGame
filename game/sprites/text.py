@@ -68,7 +68,7 @@ class GameOverTextSprite(pg.sprite.Sprite):
         """
         super().__init__(c.textGroup)
         spriteSheet = SpriteSheet("display.png")
-        self.image = spriteSheet.getSheetImage(437, 536, 62, 32)
+        self.image = spriteSheet.getSheetImage(404, 536, 62, 32)
         self.image.set_colorkey(c.RED)
         self.coordinates = (20, 478)
         self.playerNumber = playerNumber
@@ -77,9 +77,10 @@ class GameOverTextSprite(pg.sprite.Sprite):
     def initialize(self):
         """Set the base coordinates of the sprite.
 
-        If playerNumber is 1, or the total number of player is at least 3 and playerNumber is 2, the coordinates
-        are set near the left edge of the screen.
-        Otherwise, they are set near the right edge of the screen.
+        If playerNumber is 1, or the total number of players is at least 3 and playerNumber is 2, the coordinates
+        are set near the left edge of the screen. Otherwise, they are set near the right edge of the screen.
+        This ensures that the first half of the players' list (rounded down) have their game over text spawn on
+        the left edge of the screen, and the second half have it spawn on the right edge.
         """
         if self.playerNumber == 1 or self.playerNumber == 2 and len(c.playerGroup) > 2:
             self.coordinates = (20, 478)

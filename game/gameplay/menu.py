@@ -18,29 +18,28 @@ def displayChangeControlMenu(titleImageOne, titleImageTwo, subtitleImage, number
         sprite.setTitleImage()
     frameCount = controlChangeIndex = 0
     currentPlayerIndex = 1
+
     # If only one player is changing their controls, the text reads "SELECT X BUTTON".
     # Otherwise, it reads "P_ X BUTTON".
     # Therefore, we change the base coordinates of the text if there are more than one players to ensure that the text
     # remains centered.
-
     if numberOfPlayers == 1:
         textCoordinates = (90, 345)
     else:
         textCoordinates = (122, 345)
 
+    # This loop continues until all available players have chosen their controls.
     while True:
-        # This loop continues until all available players have chosen their controls.
-
         checkQuitGame()
         for event in pg.event.get():
             if event.type == pg.KEYDOWN:
                 controlChangeIndex = changeControlInput(controlChangeIndex, event, currentPlayerIndex, numberOfPlayers)
                 frameCount = 0
-        if controlChangeIndex == 6:
-            # There are only six items in each sub-dictionary of the controlsDicts.
-            # Therefore, if we reach index 6 of our controlsList (A default "none" value), we loop back to index 0 and
-            # set the controls for the next player.
 
+        # There are only six items in each sub-dictionary of the controlsDicts.
+        # Therefore, if we reach index 6 of our controlsList (A default "none" value), we loop back to index 0 and
+        # set the controls for the next player.
+        if controlChangeIndex == 6:
             if currentPlayerIndex == numberOfPlayers:
                 return
             else:
@@ -57,7 +56,6 @@ def displayChangeControlMenu(titleImageOne, titleImageTwo, subtitleImage, number
 
         # We change the location where we will draw the text whenever the number of letters in the control we will set
         # changes. This ensures that the text is always centered on the screen.
-
         if controlChangeIndex == 2:
             textCoordinates = setTextCoordinates(23, numberOfPlayers)
         elif controlChangeIndex == 3:
@@ -69,8 +67,8 @@ def displayChangeControlMenu(titleImageOne, titleImageTwo, subtitleImage, number
         else:
             controlInputText = c.FONT.render("P{} '{}' BUTTON".format(currentPlayerIndex, controlToChange.upper()),
                                              False, c.WHITE)
-        # The text onscreen flashes every 30 frames.
 
+        # The text onscreen flashes every 30 frames.
         if frameCount % 60 < 30:
             c.SCREEN.blit(controlInputText, textCoordinates)
         pg.display.update()
@@ -92,31 +90,32 @@ def changeControlInput(controlChangeIndex, event, currentPlayerIndex, numberOfPl
         controlChangeIndex: An integer representing which control we are next changing.
     """
     controlsList = ["shoot", "pause", "up", "down", "left", "right", "none"]
+
     # currentIndex is just one lower than currentPlayerIndex. This is used for the sake of consistency and simplicity
     # in assigning values to specific indexes of the controlsDicts.
-
     currentIndex = currentPlayerIndex - 1
+
     if controlChangeIndex == 0 and currentIndex == 0:
         for listIndex, controls in enumerate(controlsDicts):
-            # Once the first player inputs his first control, every other player's controls are set to blank.
+
+            # Once the first player inputs his first control, every other current player's controls are set to blank.
             # This is done as we have later code that ensures that no single key can control two actions between any
             # players. By removing every player's controls preemptively, we can prevent this from triggering if, for
             # example, player one wants to input a key that player two uses by default.
             # If fewer than four players are inputting their controls, this stops setting controls to blank once it has
             # done so for each acting player. This ensures that, should the user later choose to start a 4-player game,
             # player 4 still has controls set.
-
             if numberOfPlayers <= listIndex:
                 break
             controlsDicts[listIndex] = controlsDicts[currentIndex].fromkeys(controlsDicts[currentIndex], "None")
     if not any(event.key in controlValue.values() for controlValue in controlsDicts):
         if controlChangeIndex == 6:
-            if currentIndex + 1 == numberOfPlayers:
-                # Ideally, this conditional will never evaluate to True, since the displayChangeControlMenu function
-                # will return before these criteria are True.
-                # It is only included as a safeguard against crashing if somehow the user does manage to reach this
-                # function at this point.
 
+            # Ideally, this conditional will never evaluate to True, since the displayChangeControlMenu function
+            # will return before these criteria are True.
+            # It is only included as a safeguard against crashing if somehow the user does manage to reach this
+            # function at this point.
+            if currentIndex + 1 == numberOfPlayers:
                 pg.mixer.music.stop()
                 pg.time.delay(500)
         else:
@@ -149,9 +148,9 @@ def chooseNumberOfPlayers(titleImageOne, titleImageTwo, subtitleImage, textToDis
     optionText = c.FONT.render(textToDisplay, False, c.CYAN)
     cursorText = c.FONT.render(">", False, c.ORANGE)
     cursorLocation = (40, 310)
+
     # Since the word "GAME" has fewer characters than the word "CONTROLS", the text's coordinates are all adjusted 30
     # pixels to the right if "GAME" is the text to be displayed, to ensure it remains centered.
-
     optionTextCoordinates = [(60, 330), (320, 330), (60, 390), (320, 390)]
     if textToDisplay == "GAME":
         optionTextCoordinates = [(90, 330), (350, 330), (90, 390), (350, 390)]

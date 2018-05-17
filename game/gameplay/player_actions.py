@@ -19,10 +19,10 @@ def pauseGame(pausingPlayerIndex):
     while True:
         checkQuitGame()
         for event in pg.event.get():
-            if event.type == pg.KEYDOWN:
-                # After unpausing, the queue is cleared to ensure that no keys pressed during the game
-                # preparing to unpause take effect.
 
+            # After unpausing, the queue is cleared to ensure that no keys pressed during the game preparing to unpause
+            # take effect.
+            if event.type == pg.KEYDOWN:
                 if event.key == controlsDicts[pausingPlayerIndex]["pause"]:
                     playSound("pause_unpause.wav")
                     pg.time.delay(1000)
@@ -42,10 +42,11 @@ def shootWave(player):
     if len(sonicWavesFromPlayer) < 2 and player.playerState in [c.PlayerStates.MOVING, c.PlayerStates.SWINGING,
                                                                 c.PlayerStates.FINISHED_SWINGING]:
         waveCoordinates = player.coordinates
+
         # In order to keep the sonic wave sprite centered on its row or column, its initial coordinates are adjusted
         # by mod 48.
-        # This is done as the player's coordinates are not centered on the row or column while they are swinging.
-
+        # This is done because the player's coordinates are not necessarily centered on the row or column while they
+        # are swinging.
         if player.isFacingHorizontally():
             if 0 < player.coordinates[1] % 48 < 24:
                 waveCoordinates = (int(player.coordinates[0]),

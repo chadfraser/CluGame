@@ -81,7 +81,7 @@ class HalfDisplaySprite(pg.sprite.Sprite):
 
 
 class DisplayIconSprite(pg.sprite.Sprite):
-    """Create a sprite of the small icon that appears during the end-of-level display.
+    """Create a sprite of the small scoring icon that appears during the end-of-level display.
 
     Attributes:
         playerNumber: An integer representing the player that this display is displaying.
@@ -127,10 +127,8 @@ class DisplayIconSprite(pg.sprite.Sprite):
         self.frameCount = 0
         self.image.set_colorkey(c.BLACK)
 
-    def update(self):
-        pass
-
     def setIconImage(self):
+        """Change the sprite's image based on animationCount, then increment animationCount by 1."""
         if self.animationCount == 0:
             self.image = self.urchinImage
         elif self.animationCount == 1:
