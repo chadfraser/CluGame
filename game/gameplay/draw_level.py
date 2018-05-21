@@ -256,7 +256,12 @@ def blitLevelEndData(playerList, level, time, levelCount, highScore, scoreBonus)
     # appropriate bonus is earned.
     bonusEarnedText = bonusScoreText = bonusLevelCompletionText = bonusLevelCompletionScore =\
         c.FONT.render("", False, c.WHITE)
-    doesScoreBonus, bonusScoringIndex = checkIfScoresBonusPoints(playerList, scoreBonus)
+
+    # Standard bonus points cannot be scored during a bonus level in a one-player game.
+    if isinstance(level, BonusLevel) and len(playerList) == 1:
+        doesScoreBonus, bonusScoringIndex = False, 0
+    else:
+        doesScoreBonus, bonusScoringIndex = checkIfScoresBonusPoints(playerList, scoreBonus)
 
     # The bonus completion points are only earned if the players collect all 66 gold bars on the bonus stage.
     if isinstance(level, BonusLevel) and sum([player.goldCollectedCount for player in playerList]) == 66:
