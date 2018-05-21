@@ -185,6 +185,8 @@ def scrollLevelData(playerList, level, goldCount, time, levelCount, highScore):
             c.SCREEN.blit(textSprite.image, (textSprite.coordinates[0], textSprite.coordinates[1] - scrollCount))
         for display in c.displayGroup:
             c.SCREEN.blit(display.image, (display.coordinates[0], display.coordinates[1] - scrollCount))
+        for trap in c.rubberGroup:
+            c.SCREEN.blit(trap.image, trap.coordinates)
 
         # Because the < > symbols should be slightly closer to the number of lives than the standard text width would
         # allow, the life count is placed 13 pixels after the <, and the > is placed 15 frames after the life count.
