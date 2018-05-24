@@ -20,6 +20,9 @@ def displayTitleScreen(playerScores=None):
     Args:
         playerScores: A list of four integers representing the most recent score earned by each player.
             Defaults to [0, 0, 0, 0].
+
+    Returns:
+        playerScores: A list of four integers representing the most recent score earned by each player.
     """
     if playerScores is None:
         playerScores = [0, 0, 0, 0]
@@ -70,6 +73,7 @@ def displayTitleScreen(playerScores=None):
                             if any(score > highScore for score in playerScores):
                                 highScore = max(playerScores)
                                 setHighScore(highScore)
+                            return playerScores
                         else:
                             numberOfPlayers = chooseNumberOfPlayers(subtitleImage, titleImageOne, titleImageTwo,
                                                                     "CONTROLS")
