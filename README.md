@@ -78,5 +78,5 @@ Pink Stage:    HEART      HOUSE      FACE       HUMAN      BUBBLES    KE        
 Green Stage:   CLOWN      SPADE      MOUSE      EAGLE      RAIN       CAR        MUSHROOM   SKULL
 Blue Stage:    SUBMARINE  GLASSES    KOALA      BUTTERFLY  FISH       CLU CLU    CROWN      SWORD+SHIELD
 Purple Stage:  HOLE       KEY        RIBBON     H          !?         FROWN      PYTHON     FLIP
-Gold Stage:    SPIDER     X          BOX        DIAMOND    INVERTED   BOX+        CRUSHER    KEY+
+Gold Stage:    SPIDER     X          BOX        DIAMOND    INVERTED   BOX+       CRUSHER    KEY+
 ```
