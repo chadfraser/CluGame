@@ -97,7 +97,9 @@ class SonicWaveSprite(pg.sprite.Sprite):
 
     def update(self):
         """Increase frameCount. Moves the sprite six pixels forward, changes its image every frame, and
-        disappears once frameCount is 32.
+        disappears once frameCount is 32. When frameCount is 1, the sprite is moved 20 pixels forward.
+
+        This prevents a glitch where the wave could not shoot an urchin that was too close to the player.
 
         If the sprite crosses over the left or right edge of the screen, they reappear at the opposite edge.
         This does not happen if the sprite crosses over the upper or lower edge of the screen.
@@ -121,7 +123,9 @@ class SonicWaveSprite(pg.sprite.Sprite):
         else:
             self.image = self.animationFrames[1]
 
-        if self.frameCount == 32:
+        if self.frameCount == 1:
+            self.setInitialCoordinates(self.coordinates[0], self.coordinates[1])
+        elif self.frameCount == 32:
             self.kill()
         self.rotateImage()
         self.image.set_colorkey(c.BLACK)

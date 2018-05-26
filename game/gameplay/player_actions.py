@@ -63,5 +63,5 @@ def shootWave(player):
                                    int(player.coordinates[1]))
         playSound("shoot_wave.wav")
         newWave = SonicWaveSprite(player.facingDirection, player.playerNumber)
-        newWave.setInitialCoordinates(waveCoordinates[0], waveCoordinates[1])
+        newWave.setCoordinates(waveCoordinates[0], waveCoordinates[1])
         c.attackGroup.add(newWave)
